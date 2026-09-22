@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2eaaf6f6033ec9d4a8bc370a61e23d0b, type: 3}
+  m_Name: AcidExplosion
+  m_EditorClassIdentifier: 
+  id: acidexplosion
+  spellName: "Explosi\xF3n \xC1cida"
+  artwork: {fileID: 0}
+  cost:
+  - type: 1
+    amount: 1
+  - type: 4
+    amount: 1
+  level1Description: "Todos los dem\xE1s jugadores reciben 1 de da\xF1o.\r"
+  level2Description: "Todos los dem\xE1s jugadores reciben 2 de da\xF1o.\r"
+  level3Description: "Todos los dem\xE1s jugadores reciben 2 de da\xF1o.\r\nAdem\xE1s,
+    todas las criaturas reciben el estado Corrosi\xF3n hasta el final del turno."
