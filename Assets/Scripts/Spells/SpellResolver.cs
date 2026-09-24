@@ -24,6 +24,9 @@ public class SpellResolver : MonoBehaviour
     [SerializeField]
     private IllusionChoicePanel illusionChoicePanel;
 
+    [SerializeField]
+    private PlayerTargetView botTargetView;
+
     public void Resolve(
         SpellInstance spellInstance,
         CreatureView targetCreature,
@@ -119,6 +122,9 @@ public class SpellResolver : MonoBehaviour
         {
             case SpellEffectType.Damage:
                 ResolveDamageToPlayer(spellInstance, targetPlayer, caster);
+                break;
+            case SpellEffectType.Drain:
+                ResolveDrainAgainstPlayer(spellInstance, targetPlayer, caster);
                 break;
 
             default:
@@ -623,6 +629,91 @@ public class SpellResolver : MonoBehaviour
                 + $"Vida restante: {targetPlayer.currentHP}/{targetPlayer.maxHP}. "
                 + $"Escudo restante: {targetPlayer.shield}."
         );
+
+        if (playerStatusView != null)
+        {
+            playerStatusView.Refresh();
+        }
+
+        if (botTargetView != null)
+        {
+            botTargetView.RefreshView();
+        }
+    }
+
+    private void ResolveDrainAgainstPlayer(
+        SpellInstance spellInstance,
+        PlayerState targetPlayer,
+        PlayerState caster
+    )
+    {
+        SpellDefinition spell = spellInstance.definition;
+
+        int damage = spell.GetEffectValue(spellInstance.level);
+
+        int healing = spell.GetSecondaryEffectValue(spellInstance.level);
+
+        int damageToHealth = 0;
+        int damageToShield = 0;
+
+        ShieldPiercingType piercing = spell.GetShieldPiercing(spellInstance.level);
+
+        switch (piercing)
+        {
+            case ShieldPiercingType.None:
+            {
+                int absorbed = Mathf.Min(targetPlayer.shield, damage);
+
+                targetPlayer.shield -= absorbed;
+                damageToShield = absorbed;
+
+                damageToHealth = damage - absorbed;
+
+                break;
+            }
+
+            case ShieldPiercingType.IgnoreOne:
+            {
+                int piercingDamage = Mathf.Min(1, damage);
+
+                damageToHealth += piercingDamage;
+
+                int remainingDamage = damage - piercingDamage;
+
+                int absorbed = Mathf.Min(targetPlayer.shield, remainingDamage);
+
+                targetPlayer.shield -= absorbed;
+                damageToShield = absorbed;
+
+                damageToHealth += remainingDamage - absorbed;
+
+                break;
+            }
+
+            case ShieldPiercingType.IgnoreAll:
+            {
+                damageToHealth = damage;
+                break;
+            }
+        }
+
+        targetPlayer.currentHP -= damageToHealth;
+
+        targetPlayer.currentHP = Mathf.Max(0, targetPlayer.currentHP);
+
+        caster.currentHP = Mathf.Min(caster.currentHP + healing, caster.maxHP);
+
+        Debug.Log(
+            $"{caster.gameObject.name} lanza {spell.spellName} "
+                + $"contra {targetPlayer.gameObject.name}. "
+                + $"Daño a vida: {damageToHealth}. "
+                + $"Curación: {healing}."
+        );
+
+        if (botTargetView != null)
+        {
+            botTargetView.RefreshView();
+        }
 
         if (playerStatusView != null)
         {

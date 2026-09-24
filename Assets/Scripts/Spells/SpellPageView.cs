@@ -57,6 +57,8 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     [SerializeField]
     private SelectedCreatureView selectedCreatureView;
 
+    private PlayerTargetSelectionManager playerTargetSelectionManager;
+
     private SpellInstance spellInstance;
 
     private CreaturePanel creaturePanel;
@@ -194,22 +196,35 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
 
         // Si el hechizo necesita objetivo criatura, comprobamos que exista.
         bool needsCreatureTarget =
-            definition.effectType == SpellEffectType.Damage
-            || definition.effectType == SpellEffectType.Drain
+            definition.effectType == SpellEffectType.Drain
             || definition.effectType == SpellEffectType.WindWhip
             || definition.effectType == SpellEffectType.Roots;
 
-        if (needsCreatureTarget)
-        {
-            if (
-                creatureSelectionManager == null
-                || creatureSelectionManager.SelectedCreature == null
-            )
-            {
-                Debug.Log($"Selecciona una criatura antes de lanzar {definition.spellName}.");
+        bool canTargetPlayer =
+            definition.effectType == SpellEffectType.Damage
+            || definition.effectType == SpellEffectType.Drain;
 
-                return;
-            }
+        bool hasCreatureTarget =
+            creatureSelectionManager != null && creatureSelectionManager.SelectedCreature != null;
+
+        bool hasPlayerTarget =
+            playerTargetSelectionManager != null
+            && playerTargetSelectionManager.SelectedPlayer != null;
+
+        if (needsCreatureTarget && !hasCreatureTarget)
+        {
+            Debug.Log($"Selecciona una criatura antes de lanzar {definition.spellName}.");
+
+            return;
+        }
+
+        if (canTargetPlayer && !hasCreatureTarget && !hasPlayerTarget)
+        {
+            Debug.Log(
+                $"Selecciona una criatura o un jugador antes de lanzar {definition.spellName}."
+            );
+
+            return;
         }
 
         // Gastar ingredientes
@@ -222,7 +237,23 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         CreatureView targetCreature =
             creatureSelectionManager != null ? creatureSelectionManager.SelectedCreature : null;
 
-        spellResolver.Resolve(spellInstance, targetCreature, player);
+        PlayerState targetPlayer =
+            playerTargetSelectionManager != null
+                ? playerTargetSelectionManager.SelectedPlayer
+                : null;
+
+        canTargetPlayer =
+            definition.effectType == SpellEffectType.Damage
+            || definition.effectType == SpellEffectType.Drain;
+
+        if (canTargetPlayer && targetPlayer != null)
+        {
+            spellResolver.ResolveAgainstPlayer(spellInstance, targetPlayer, player);
+        }
+        else
+        {
+            spellResolver.Resolve(spellInstance, targetCreature, player);
+        }
 
         // Aumentar maestría
         spellInstance.AddMastery();
@@ -376,5 +407,10 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     public void SetSpellResolver(SpellResolver resolver)
     {
         spellResolver = resolver;
+    }
+
+    public void SetPlayerTargetSelectionManager(PlayerTargetSelectionManager manager)
+    {
+        playerTargetSelectionManager = manager;
     }
 }

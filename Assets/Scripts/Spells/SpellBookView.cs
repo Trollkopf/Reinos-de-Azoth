@@ -47,6 +47,9 @@ public class SpellBookView : MonoBehaviour
     [SerializeField]
     private SpellResolver spellResolver;
 
+    [SerializeField]
+    private PlayerTargetSelectionManager playerTargetSelectionManager;
+
     private List<SpellInstance> spells;
     private int currentSpreadIndex = 0;
 
@@ -81,7 +84,7 @@ public class SpellBookView : MonoBehaviour
             leftPage.SetSelectedCreatureView(selectedCreatureView);
             leftPage.SetCreaturePanel(creaturePanel);
             leftPage.SetSpellResolver(spellResolver);
-
+            leftPage.SetPlayerTargetSelectionManager(playerTargetSelectionManager);
         }
         else
         {
@@ -99,6 +102,7 @@ public class SpellBookView : MonoBehaviour
             rightPage.SetSelectedCreatureView(selectedCreatureView);
             rightPage.SetCreaturePanel(creaturePanel);
             rightPage.SetSpellResolver(spellResolver);
+            rightPage.SetPlayerTargetSelectionManager(playerTargetSelectionManager);
         }
         else
         {
