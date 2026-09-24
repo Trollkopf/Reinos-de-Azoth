@@ -24,10 +24,18 @@ public class SpellResolver : MonoBehaviour
     [SerializeField]
     private IllusionChoicePanel illusionChoicePanel;
 
-    List<CreatureView> defeatedCreatures = new List<CreatureView>();
-
-    public void Resolve(SpellInstance spellInstance, CreatureView targetCreature)
+    public void Resolve(
+        SpellInstance spellInstance,
+        CreatureView targetCreature,
+        PlayerState caster
+    )
     {
+        if (caster == null)
+        {
+            Debug.LogError("SpellResolver: caster es NULL.");
+            return;
+        }
+
         if (spellInstance == null)
         {
             Debug.LogError("SpellResolver: spellInstance es NULL");
@@ -48,33 +56,33 @@ public class SpellResolver : MonoBehaviour
             case SpellEffectType.Damage:
                 Debug.Log("Resolviendo DAMAGE");
 
-                ResolveDamage(spellInstance, targetCreature);
+                ResolveDamage(spellInstance, targetCreature, caster);
                 break;
 
             case SpellEffectType.Heal:
                 Debug.Log("Resolviendo HEAL");
 
-                ResolveHeal(spellInstance);
+                ResolveHeal(spellInstance, caster);
                 break;
 
             case SpellEffectType.Shield:
-                ResolveShield(spellInstance);
+                ResolveShield(spellInstance, caster);
                 break;
 
             case SpellEffectType.Drain:
-                ResolveDrain(spellInstance, targetCreature);
+                ResolveDrain(spellInstance, targetCreature, caster);
                 break;
 
             case SpellEffectType.WindWhip:
-                ResolveWindWhip(spellInstance, targetCreature);
+                ResolveWindWhip(spellInstance, targetCreature, caster);
                 break;
 
             case SpellEffectType.Roots:
-                ResolveRoots(spellInstance, targetCreature);
+                ResolveRoots(spellInstance, targetCreature, caster);
                 break;
 
             case SpellEffectType.AcidExplosion:
-                ResolveAcidExplosion(spellInstance, targetCreature);
+                ResolveAcidExplosion(spellInstance, targetCreature, caster);
                 break;
 
             case SpellEffectType.Illusion:
@@ -87,7 +95,7 @@ public class SpellResolver : MonoBehaviour
         }
     }
 
-    private void ResolveDamage(SpellInstance spellInstance, CreatureView targetCreature)
+    private void ResolveDamage(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
     {
         if (targetCreature == null)
         {
@@ -123,24 +131,24 @@ public class SpellResolver : MonoBehaviour
         // Si muere, damos recompensas y no contraataca
         if (creature.IsDead)
         {
-            ResolveCreatureDeath(targetCreature, creature);
+            ResolveCreatureDeath(targetCreature, creature, caster);
 
             return;
         }
 
         // Si sobrevive, contraataca
-        ResolveCounterAttack(creature);
+        ResolveCounterAttack(creature, caster);
     }
 
-    private void ResolveHeal(SpellInstance spellInstance)
+    private void ResolveHeal(SpellInstance spellInstance, PlayerState caster)
     {
         int heal = spellInstance.definition.GetEffectValue(spellInstance.level);
 
-        player.currentHP += heal;
+        caster.currentHP += heal;
 
-        if (player.currentHP > player.maxHP)
+        if (caster.currentHP > caster.maxHP)
         {
-            player.currentHP = player.maxHP;
+            caster.currentHP = caster.maxHP;
         }
 
         playerStatusView.Refresh();
@@ -148,17 +156,17 @@ public class SpellResolver : MonoBehaviour
         Debug.Log($"{spellInstance.definition.spellName} " + $"cura {heal} PV.");
     }
 
-    private void ResolveCounterAttack(CreatureInstance creature)
+    private void ResolveCounterAttack(CreatureInstance creature, PlayerState caster)
     {
         int damage = creature.definition.attack;
 
         int remainingDamage = damage;
 
-        if (player.shield > 0)
+        if (caster.shield > 0)
         {
-            int absorbed = Mathf.Min(player.shield, remainingDamage);
+            int absorbed = Mathf.Min(caster.shield, remainingDamage);
 
-            player.shield -= absorbed;
+            caster.shield -= absorbed;
             remainingDamage -= absorbed;
 
             Debug.Log($"El Escudo Arcano absorbe {absorbed} de daño.");
@@ -166,11 +174,11 @@ public class SpellResolver : MonoBehaviour
 
         if (remainingDamage > 0)
         {
-            player.currentHP -= remainingDamage;
+            caster.currentHP -= remainingDamage;
 
-            if (player.currentHP < 0)
+            if (caster.currentHP < 0)
             {
-                player.currentHP = 0;
+                caster.currentHP = 0;
             }
         }
 
@@ -185,15 +193,15 @@ public class SpellResolver : MonoBehaviour
         }
     }
 
-    private void ResolveCreatureDeath(CreatureView creatureView, CreatureInstance creature)
+    private void ResolveCreatureDeath(CreatureView creatureView, CreatureInstance creature, PlayerState caster)
     {
         CreatureDefinition definition = creature.definition;
 
         Debug.Log($"{definition.creatureName} ha sido derrotado.");
 
-        player.coins += definition.coinReward;
+        caster.coins += definition.coinReward;
 
-        player.arcanePower += definition.arcanePowerReward;
+        caster.arcanePower += definition.arcanePowerReward;
 
         Debug.Log(
             $"Recompensa: +{definition.coinReward} monedas, "
@@ -216,20 +224,20 @@ public class SpellResolver : MonoBehaviour
         }
     }
 
-    private void ResolveShield(SpellInstance spellInstance)
+    private void ResolveShield(SpellInstance spellInstance, PlayerState caster)
     {
         int shieldAmount = spellInstance.definition.GetEffectValue(spellInstance.level);
 
-        int previousShield = player.shield;
+        int previousShield = caster.shield;
 
-        player.shield = Mathf.Min(player.shield + shieldAmount, PlayerState.MaxShield);
+        caster.shield = Mathf.Min(caster.shield + shieldAmount, PlayerState.MaxShield);
 
-        int gainedShield = player.shield - previousShield;
+        int gainedShield = caster.shield - previousShield;
 
         Debug.Log(
             $"{spellInstance.definition.spellName} "
                 + $"otorga {gainedShield} puntos de escudo. "
-                + $"Escudo actual: {player.shield}/{PlayerState.MaxShield}."
+                + $"Escudo actual: {caster.shield}/{PlayerState.MaxShield}."
         );
 
         if (playerStatusView != null)
@@ -238,7 +246,7 @@ public class SpellResolver : MonoBehaviour
         }
     }
 
-    private void ResolveDrain(SpellInstance spellInstance, CreatureView targetCreature)
+    private void ResolveDrain(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
     {
         if (targetCreature == null)
         {
@@ -260,7 +268,7 @@ public class SpellResolver : MonoBehaviour
 
         creature.TakeDamage(damage);
 
-        player.currentHP = Mathf.Min(player.currentHP + healing, player.maxHP);
+        caster.currentHP = Mathf.Min(caster.currentHP + healing, caster.maxHP);
 
         targetCreature.Refresh();
 
@@ -280,15 +288,15 @@ public class SpellResolver : MonoBehaviour
 
         if (creature.IsDead)
         {
-            ResolveCreatureDeath(targetCreature, creature);
+            ResolveCreatureDeath(targetCreature, creature, caster);
 
             return;
         }
 
-        ResolveCounterAttack(creature);
+        ResolveCounterAttack(creature, caster);
     }
 
-    private void ResolveWindWhip(SpellInstance spellInstance, CreatureView targetCreature)
+    private void ResolveWindWhip(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
     {
         if (targetCreature == null)
         {
@@ -320,22 +328,22 @@ public class SpellResolver : MonoBehaviour
         // Nivel 3: roba 1 ingrediente
         if (spellInstance.level >= 3 && ingredientDeck != null)
         {
-            ingredientDeck.DrawToPlayer(player, 1);
+            ingredientDeck.DrawToPlayer(caster, 1);
 
             Debug.Log("Látigo de Viento Nv.3: robas 1 ingrediente.");
         }
 
         if (creature.IsDead)
         {
-            ResolveCreatureDeath(targetCreature, creature);
+            ResolveCreatureDeath(targetCreature, creature, caster);
 
             return;
         }
 
-        ResolveCounterAttack(creature);
+        ResolveCounterAttack(creature, caster);
     }
 
-    private void ResolveRoots(SpellInstance spellInstance, CreatureView targetCreature)
+    private void ResolveRoots(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
     {
         if (targetCreature == null)
         {
@@ -373,7 +381,7 @@ public class SpellResolver : MonoBehaviour
 
         if (creature.IsDead)
         {
-            ResolveCreatureDeath(targetCreature, creature);
+            ResolveCreatureDeath(targetCreature, creature, caster);
 
             return;
         }
@@ -385,7 +393,7 @@ public class SpellResolver : MonoBehaviour
         );
     }
 
-    private void ResolveAcidExplosion(SpellInstance spellInstance, CreatureView targetCreature)
+    private void ResolveAcidExplosion(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
     {
         if (creaturePanel == null)
         {
@@ -434,7 +442,7 @@ public class SpellResolver : MonoBehaviour
         {
             CreatureInstance creature = defeatedCreature.GetCreatureInstance();
 
-            ResolveCreatureDeath(defeatedCreature, creature);
+            ResolveCreatureDeath(defeatedCreature, creature, caster);
         }
 
         if (selectedCreatureView != null)

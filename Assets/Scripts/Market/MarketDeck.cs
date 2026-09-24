@@ -23,10 +23,24 @@ public class MarketDeck : MonoBehaviour
 
     private readonly List<MarketCardDefinition> discardPile = new List<MarketCardDefinition>();
 
-    private void Awake()
+    private bool initialized = false;
+
+    public void Initialize()
     {
+        if (initialized)
+            return;
+
         BuildDeck();
         Shuffle();
+
+        initialized = true;
+
+        Debug.Log($"Mazo de mercado preparado con {deck.Count} cartas.");
+    }
+
+    private void Awake()
+    {
+        Initialize();
     }
 
     private void BuildDeck()
@@ -64,6 +78,8 @@ public class MarketDeck : MonoBehaviour
 
     public MarketCardDefinition Draw()
     {
+        Initialize();
+
         if (deck.Count == 0)
         {
             RebuildFromDiscard();

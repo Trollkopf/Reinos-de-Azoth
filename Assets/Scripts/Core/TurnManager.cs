@@ -21,48 +21,73 @@ public class TurnManager : MonoBehaviour
     [SerializeField]
     private CreaturePanel creaturePanel;
 
+    [SerializeField]
+    private PlayerState botPlayer;
+
+    [SerializeField]
+    private BotController botController;
+
     private int turnNumber = 1;
+    private bool isPlayerTurn = true;
 
     public void EndTurn()
     {
-        int ingredientCount = player.inventory.GetTotalCount();
+        // Solo el jugador humano usa este botón
+        if (!isPlayerTurn)
+            return;
 
-        if (ingredientCount > PlayerState.MaxHandSize)
+        // No puede acabar con más de 7 ingredientes
+        if (player.inventory.GetTotalCount() > PlayerState.MaxHandSize)
         {
-            Debug.Log(
-                $"No puedes terminar el turno. "
-                    + $"Tienes {ingredientCount} ingredientes y el máximo es {PlayerState.MaxHandSize}."
-            );
+            Debug.Log("Debes descartar ingredientes antes de terminar el turno.");
 
             return;
         }
 
-        if (creaturePanel != null)
-        {
-            creaturePanel.ClearCorrosion();
-        }
+        Debug.Log("Termina el turno del jugador.");
 
-        Debug.Log($"Fin del turno {turnNumber}");
+        isPlayerTurn = false;
 
-        turnNumber++;
-
-        StartTurn();
+        StartBotTurn();
     }
 
     private void StartTurn()
     {
-        Debug.Log($"Comienza el turno {turnNumber}");
+        Debug.Log($"===== TURNO {turnNumber} DEL JUGADOR =====");
 
-        // Robar 1 ingrediente al inicio del turno
         ingredientDeck.DrawToPlayer(player, 1);
 
-        // Refrescar el grimorio
-        spellBookView.RefreshBook();
-
-        // Refrescar la vista del inventario
-        inventoryView.Refresh();
+        if (spellBookView != null)
+        {
+            spellBookView.RefreshBook();
+        }
 
         DebugInventory();
+    }
+
+    private void StartBotTurn()
+    {
+        Debug.Log("===== TURNO DEL BOT =====");
+
+        ingredientDeck.DrawToPlayer(botPlayer, 1);
+
+        botController.StartBotTurn();
+
+        // De momento el bot termina automáticamente
+        EndBotTurn();
+    }
+
+    private void EndBotTurn()
+    {
+        botController.DiscardDownToHandLimit();
+
+        Debug.Log("Termina el turno del bot.");
+
+        isPlayerTurn = true;
+
+        turnNumber++;
+
+        StartTurn();
     }
 
     private void DebugInventory()

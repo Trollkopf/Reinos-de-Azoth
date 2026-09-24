@@ -222,7 +222,7 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         CreatureView targetCreature =
             creatureSelectionManager != null ? creatureSelectionManager.SelectedCreature : null;
 
-        spellResolver.Resolve(spellInstance, targetCreature);
+        spellResolver.Resolve(spellInstance, targetCreature, player);
 
         // Aumentar maestría
         spellInstance.AddMastery();

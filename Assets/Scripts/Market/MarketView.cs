@@ -28,16 +28,23 @@ public class MarketView : MonoBehaviour
 
     private const int VisibleSlots = 5;
 
-    private void Start()
+    private void Awake()
     {
+        marketDeck.Initialize();
         InitializeMarket();
     }
 
     private void InitializeMarket()
     {
+        if (visibleCards.Count > 0)
+            return;
+
         for (int i = 0; i < VisibleSlots; i++)
         {
             MarketCardDefinition card = marketDeck.Draw();
+
+            if (card == null)
+                continue;
 
             visibleCards.Add(card);
 
@@ -47,10 +54,15 @@ public class MarketView : MonoBehaviour
 
             cardViews.Add(view);
         }
+
+        Debug.Log($"Mercado inicializado con {visibleCards.Count} cartas.");
     }
 
-    public void TryBuy(int slotIndex)
+    public void TryBuy(int slotIndex, PlayerState buyer)
     {
+        if (buyer == null)
+            return;
+
         if (slotIndex < 0 || slotIndex >= visibleCards.Count)
         {
             return;
@@ -61,16 +73,16 @@ public class MarketView : MonoBehaviour
         if (card == null)
             return;
 
-        if (player.coins < card.price)
+        if (buyer.coins < card.price)
         {
             Debug.Log($"No tienes monedas suficientes. Necesitas {card.price}.");
 
             return;
         }
 
-        player.coins -= card.price;
+        buyer.coins -= card.price;
 
-        player.inventory.Add(card.ingredientType, card.amount);
+        buyer.inventory.Add(card.ingredientType, card.amount);
 
         Debug.Log(
             $"Comprado {card.amount} x {card.ingredientType} " + $"por {card.price} monedas."
@@ -92,5 +104,25 @@ public class MarketView : MonoBehaviour
         visibleCards[slotIndex] = newCard;
 
         cardViews[slotIndex].Setup(newCard, this, slotIndex);
+    }
+
+    public PlayerState GetPlayer()
+    {
+        return player;
+    }
+
+    public int GetVisibleCardCount()
+    {
+        return visibleCards.Count;
+    }
+
+    public MarketCardDefinition GetCardAt(int index)
+    {
+        if (index < 0 || index >= visibleCards.Count)
+        {
+            return null;
+        }
+
+        return visibleCards[index];
     }
 }

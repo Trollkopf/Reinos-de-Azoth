@@ -52,7 +52,7 @@ public class MarketCardView : MonoBehaviour
 
     public void Buy()
     {
-        marketView.TryBuy(slotIndex);
+        marketView.TryBuy(slotIndex, marketView.GetPlayer());
     }
 
     private string GetIngredientDisplayName(IngredientType type)
