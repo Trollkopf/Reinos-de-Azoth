@@ -21,6 +21,9 @@ public class SpellResolver : MonoBehaviour
     [SerializeField]
     private IngredientDeck ingredientDeck;
 
+    [SerializeField]
+    private IllusionChoicePanel illusionChoicePanel;
+
     List<CreatureView> defeatedCreatures = new List<CreatureView>();
 
     public void Resolve(SpellInstance spellInstance, CreatureView targetCreature)
@@ -463,17 +466,28 @@ public class SpellResolver : MonoBehaviour
             return;
         }
 
+        if (illusionChoicePanel == null)
+        {
+            Debug.LogError("SpellResolver: IllusionChoicePanel no está asignado.");
+
+            return;
+        }
+
         int drawAmount = spellInstance.definition.GetEffectValue(spellInstance.level);
 
         int keepAmount = spellInstance.definition.GetSecondaryEffectValue(spellInstance.level);
 
-        Debug.Log($"Ilusión: roba {drawAmount} ingredientes " + $"y conserva {keepAmount}.");
+        List<IngredientType> revealedIngredients = new List<IngredientType>();
 
         for (int i = 0; i < drawAmount; i++)
         {
             IngredientType ingredient = ingredientDeck.Draw();
 
+            revealedIngredients.Add(ingredient);
+
             Debug.Log($"Ilusión ha revelado: {ingredient}");
         }
+
+        illusionChoicePanel.ShowChoices(revealedIngredients, keepAmount);
     }
 }

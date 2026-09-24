@@ -269,14 +269,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.35976514, g: 0.3519936, b: 0.6603774, a: 1}
+  m_Color: {r: 0.6552084, g: 0.3915094, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10911, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 21300000, guid: 12f7e3f2ad2038f40a7a7ffa63c9ce04, type: 3}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1092,6 +1092,10 @@ MonoBehaviour:
   player: {fileID: 0}
   unavailableOverlay: {fileID: 5962576253980482255}
   unavailableText: {fileID: 8819463864022763784}
+  inventoryView: {fileID: 0}
+  creatureSelectionManager: {fileID: 0}
+  playerStatusView: {fileID: 0}
+  selectedCreatureView: {fileID: 0}
 --- !u!1 &8696902218349063882
 GameObject:
   m_ObjectHideFlags: 0
