@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Unity.Mathematics;
 using UnityEngine;
 
 public class BotController : MonoBehaviour
@@ -20,6 +19,17 @@ public class BotController : MonoBehaviour
     [SerializeField]
     private MarketView marketView;
 
+    [SerializeField]
+    private PlayerManager playerManager;
+
+    private class OffensiveDecision
+    {
+        public SpellInstance spell;
+        public CreatureView creatureTarget;
+        public PlayerState playerTarget;
+        public int score;
+    }
+
     public void StartBotTurn()
     {
         Debug.Log(
@@ -30,6 +40,8 @@ public class BotController : MonoBehaviour
                 + $"Poder Arcano: {player.arcanePower}, "
                 + $"Ingredientes: {player.inventory.GetTotalCount()}"
         );
+
+        EvaluateOpponents();
 
         EvaluateAvailableSpells();
 
@@ -54,7 +66,7 @@ public class BotController : MonoBehaviour
                 && player.inventory.CanAfford(spell.definition)
             )
             {
-                Debug.Log($"Bot puede lanzar: " + $"{spell.definition.spellName}");
+                Debug.Log($"Bot puede lanzar: {spell.definition.spellName}");
             }
         }
     }
@@ -69,9 +81,7 @@ public class BotController : MonoBehaviour
         if (creatures == null || creatures.Count == 0)
             return false;
 
-        SpellInstance bestSpell = null;
-        CreatureView bestTarget = null;
-        int bestScore = int.MinValue;
+        OffensiveDecision bestDecision = new OffensiveDecision { score = int.MinValue };
 
         foreach (SpellInstance spell in spellBook.Spells)
         {
@@ -102,19 +112,17 @@ public class BotController : MonoBehaviour
                         + $"contra todas las criaturas → puntuación {score}"
                 );
 
-                if (score > bestScore)
+                if (score > bestDecision.score)
                 {
-                    bestScore = score;
-                    bestSpell = spell;
-
-                    // No necesita objetivo individual
-                    bestTarget = null;
+                    bestDecision.spell = spell;
+                    bestDecision.creatureTarget = null;
+                    bestDecision.playerTarget = null;
+                    bestDecision.score = score;
                 }
-
                 continue;
             }
 
-            // El resto sí se evalúa criatura por criatura.
+            // El resto se evalúa criatura por criatura.
             foreach (CreatureView creatureView in creatures)
             {
                 if (creatureView == null)
@@ -123,7 +131,9 @@ public class BotController : MonoBehaviour
                 CreatureInstance creature = creatureView.GetCreatureInstance();
 
                 if (creature == null || creature.IsDead)
+                {
                     continue;
+                }
 
                 int score = EvaluateOffensiveMove(spell, creature);
 
@@ -133,50 +143,106 @@ public class BotController : MonoBehaviour
                         + $"→ puntuación {score}"
                 );
 
-                if (score > bestScore)
+                if (score > bestDecision.score)
                 {
-                    bestScore = score;
-                    bestSpell = spell;
-                    bestTarget = creatureView;
+                    bestDecision.spell = spell;
+                    bestDecision.creatureTarget = creatureView;
+                    bestDecision.playerTarget = null;
+                    bestDecision.score = score;
                 }
             }
         }
 
-        if (bestSpell == null)
+        List<PlayerState> opponents = playerManager.GetOpponents(player);
+
+        foreach (SpellInstance spell in spellBook.Spells)
+        {
+            if (spell == null || spell.definition == null)
+                continue;
+
+            if (!player.inventory.CanAfford(spell.definition))
+                continue;
+
+            if (spell.definition.effectType != SpellEffectType.Damage)
+            {
+                continue;
+            }
+
+            foreach (PlayerState opponent in opponents)
+            {
+                int score = EvaluatePlayerAttack(spell, opponent);
+
+                Debug.Log(
+                    $"Bot evalúa {spell.definition.spellName} "
+                        + $"contra {opponent.gameObject.name} "
+                        + $"→ puntuación PvP {score}"
+                );
+
+                if (score > bestDecision.score)
+                {
+                    bestDecision.spell = spell;
+                    bestDecision.creatureTarget = null;
+                    bestDecision.playerTarget = opponent;
+                    bestDecision.score = score;
+                }
+            }
+        }
+
+        if (bestDecision.spell == null)
         {
             Debug.Log("Bot no encuentra ningún ataque posible.");
 
             return false;
         }
 
-        bool spent = player.inventory.Spend(bestSpell.definition);
+        bool spent = player.inventory.Spend(bestDecision.spell.definition);
 
         if (!spent)
             return false;
 
-        if (bestSpell.definition.effectType == SpellEffectType.AcidExplosion)
+        if (!spent)
+            return false;
+
+        if (bestDecision.playerTarget != null)
         {
             Debug.Log(
                 $"Bot decide lanzar "
-                    + $"{bestSpell.definition.spellName} "
+                    + $"{bestDecision.spell.definition.spellName} "
+                    + $"contra {bestDecision.playerTarget.gameObject.name}."
+            );
+
+            spellResolver.ResolveAgainstPlayer(
+                bestDecision.spell,
+                bestDecision.playerTarget,
+                player
+            );
+        }
+        else if (bestDecision.spell.definition.effectType == SpellEffectType.AcidExplosion)
+        {
+            Debug.Log(
+                $"Bot decide lanzar "
+                    + $"{bestDecision.spell.definition.spellName} "
                     + $"contra todas las criaturas."
             );
+
+            spellResolver.Resolve(bestDecision.spell, null, player);
         }
         else
         {
-            if (bestTarget == null)
+            if (bestDecision.creatureTarget == null)
                 return false;
 
             Debug.Log(
                 $"Bot decide lanzar "
-                    + $"{bestSpell.definition.spellName} "
-                    + $"contra {bestTarget.GetCreatureName()}."
+                    + $"{bestDecision.spell.definition.spellName} "
+                    + $"contra "
+                    + $"{bestDecision.creatureTarget.GetCreatureName()}."
             );
+
+            spellResolver.Resolve(bestDecision.spell, bestDecision.creatureTarget, player);
         }
 
-        spellResolver.Resolve(bestSpell, bestTarget, player);
-
-        bestSpell.AddMastery();
+        bestDecision.spell.AddMastery();
 
         return true;
     }
@@ -197,7 +263,9 @@ public class BotController : MonoBehaviour
             CreatureInstance creature = creatureView.GetCreatureInstance();
 
             if (creature == null || creature.IsDead)
+            {
                 continue;
+            }
 
             // Valoramos todo el daño que hará.
             score += damage;
@@ -212,7 +280,7 @@ public class BotController : MonoBehaviour
                 score += creature.definition.arcanePowerReward * 10;
             }
 
-            // Nivel 3 además deja corrosión
+            // Nivel 3 además deja corrosión.
             if (spell.level >= 3 && damage < creature.currentHP)
             {
                 score += 4;
@@ -224,14 +292,21 @@ public class BotController : MonoBehaviour
 
     private int EvaluateOffensiveMove(SpellInstance spell, CreatureInstance creature)
     {
-        int baseDamage = spell.definition.GetEffectValue(spell.level);
-
-        int score = baseDamage;
+        int damage = spell.definition.GetEffectValue(spell.level);
 
         SpellEffectType effectType = spell.definition.effectType;
 
-        // Si puede matar a la criatura, prioridad alta.
-        if (baseDamage >= creature.currentHP)
+        // La corrosión añade +1 de daño real.
+        if (creature.isCorroded && damage > 0)
+        {
+            damage += 1;
+        }
+
+        int score = damage;
+
+        // Si puede matar a la criatura,
+        // prioridad alta.
+        if (damage >= creature.currentHP)
         {
             score += 100;
 
@@ -241,7 +316,8 @@ public class BotController : MonoBehaviour
         }
 
         // Drenaje Vital:
-        // cuanto más herido esté el bot, más interesante.
+        // cuanto más herido esté el bot,
+        // más interesante resulta.
         if (effectType == SpellEffectType.Drain)
         {
             int missingHP = player.maxHP - player.currentHP;
@@ -254,25 +330,19 @@ public class BotController : MonoBehaviour
         }
 
         // Raíces:
-        // evita el contraataque, así que gana valor
-        // contra criaturas que pegan fuerte.
+        // evita contraataque,
+        // así que vale más contra
+        // criaturas que pegan fuerte.
         if (effectType == SpellEffectType.Roots)
         {
             score += creature.definition.attack * 4;
         }
 
-        // Látigo de Viento:
-        // a nivel 3 roba ingrediente.
+        // Látigo de Viento Nv.3:
+        // roba un ingrediente.
         if (effectType == SpellEffectType.WindWhip && spell.level >= 3)
         {
             score += 5;
-        }
-
-        // Si la criatura está corroída,
-        // los ataques ofensivos hacen +1 real.
-        if (creature.isCorroded && baseDamage > 0)
-        {
-            score += 1;
         }
 
         return score;
@@ -313,12 +383,15 @@ public class BotController : MonoBehaviour
     private IngredientType? FindLeastUsefulIngredient()
     {
         IngredientType? worstIngredient = null;
+
         int worstScore = int.MaxValue;
 
         foreach (IngredientType type in System.Enum.GetValues(typeof(IngredientType)))
         {
             if (player.inventory.GetAmount(type) <= 0)
+            {
                 continue;
+            }
 
             int score = GetIngredientUsefulness(type);
 
@@ -359,27 +432,36 @@ public class BotController : MonoBehaviour
 
     private void TryHeal()
     {
-        // Si solo le falta 0 o 1 PV, no gastamos recursos.
+        // Si solo le falta 0 o 1 PV,
+        // no gastamos recursos.
         if (player.currentHP > player.maxHP - 2)
+        {
             return;
+        }
 
         foreach (SpellInstance spell in spellBook.Spells)
         {
             if (spell == null || spell.definition == null)
+            {
                 continue;
+            }
 
             if (spell.definition.effectType != SpellEffectType.Heal)
+            {
                 continue;
+            }
 
             if (!player.inventory.CanAfford(spell.definition))
+            {
                 continue;
+            }
 
             bool spent = player.inventory.Spend(spell.definition);
 
             if (!spent)
                 return;
 
-            Debug.Log($"Bot decide curarse con {spell.definition.spellName}.");
+            Debug.Log($"Bot decide curarse con " + $"{spell.definition.spellName}.");
 
             spellResolver.Resolve(spell, null, player);
 
@@ -391,27 +473,34 @@ public class BotController : MonoBehaviour
 
     private void TryShield()
     {
-        // Si ya tiene bastante escudo, no gastamos recursos.
+        // Si ya tiene bastante escudo,
+        // no gastamos recursos.
         if (player.shield >= 3)
             return;
 
         foreach (SpellInstance spell in spellBook.Spells)
         {
             if (spell == null || spell.definition == null)
+            {
                 continue;
+            }
 
             if (spell.definition.effectType != SpellEffectType.Shield)
+            {
                 continue;
+            }
 
             if (!player.inventory.CanAfford(spell.definition))
+            {
                 continue;
+            }
 
             bool spent = player.inventory.Spend(spell.definition);
 
             if (!spent)
                 return;
 
-            Debug.Log($"Bot decide protegerse con {spell.definition.spellName}.");
+            Debug.Log($"Bot decide protegerse con " + $"{spell.definition.spellName}.");
 
             spellResolver.Resolve(spell, null, player);
 
@@ -455,7 +544,8 @@ public class BotController : MonoBehaviour
                 }
 
                 // Si ya podemos lanzar el hechizo,
-                // comprar para él no nos aporta nada inmediato.
+                // comprar para él no nos aporta
+                // nada inmediato.
                 if (player.inventory.CanAfford(spell.definition))
                 {
                     continue;
@@ -489,7 +579,7 @@ public class BotController : MonoBehaviour
         // compramos una asequible al azar.
         if (bestSlot == -1)
         {
-            bestSlot = affordableSlots[UnityEngine.Random.Range(0, affordableSlots.Count)];
+            bestSlot = affordableSlots[Random.Range(0, affordableSlots.Count)];
 
             Debug.Log(
                 "Bot no encuentra una compra estratégica. " + "Compra una carta asequible al azar."
@@ -504,9 +594,6 @@ public class BotController : MonoBehaviour
                 + $"por {chosenCard.price} monedas. "
                 + $"Puntuación: {bestScore}"
         );
-
-        if (affordableSlots.Count == 0)
-            return false;
 
         marketView.TryBuy(bestSlot, player);
 
@@ -544,7 +631,7 @@ public class BotController : MonoBehaviour
         {
             int currentAmount = player.inventory.GetAmount(requirement.Key);
 
-            // Simulamos la compra
+            // Simulamos la compra.
             if (requirement.Key == card.ingredientType)
             {
                 currentAmount += card.amount;
@@ -557,5 +644,65 @@ public class BotController : MonoBehaviour
         }
 
         return true;
+    }
+
+    private void EvaluateOpponents()
+    {
+        if (playerManager == null)
+            return;
+
+        List<PlayerState> opponents = playerManager.GetOpponents(player);
+
+        foreach (PlayerState opponent in opponents)
+        {
+            Debug.Log(
+                $"Bot detecta rival: "
+                    + $"{opponent.gameObject.name} | "
+                    + $"Vida: {opponent.currentHP}/{opponent.maxHP} | "
+                    + $"Escudo: {opponent.shield}"
+            );
+        }
+    }
+
+    private int EvaluatePlayerAttack(SpellInstance spell, PlayerState target)
+    {
+        int damage = spell.definition.GetEffectValue(spell.level);
+
+        int score = damage;
+
+        ShieldPiercingType piercing = spell.definition.GetShieldPiercing(spell.level);
+
+        int effectiveDamage = damage;
+
+        if (piercing == ShieldPiercingType.None && target.shield > 0)
+        {
+            effectiveDamage = Mathf.Max(0, damage - target.shield);
+        }
+
+        if (piercing == ShieldPiercingType.IgnoreOne && target.shield > 0)
+        {
+            int directDamage = Mathf.Min(1, damage);
+
+            int remaining = damage - directDamage;
+
+            int afterShield = Mathf.Max(0, remaining - target.shield);
+
+            effectiveDamage = directDamage + afterShield;
+        }
+
+        if (piercing == ShieldPiercingType.IgnoreAll)
+        {
+            effectiveDamage = damage;
+        }
+
+        score += effectiveDamage * 3;
+
+        // Si puede matar al rival, prioridad enorme.
+        if (effectiveDamage >= target.currentHP)
+        {
+            score += 200;
+        }
+
+        return score;
     }
 }

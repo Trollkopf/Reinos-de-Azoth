@@ -95,7 +95,43 @@ public class SpellResolver : MonoBehaviour
         }
     }
 
-    private void ResolveDamage(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
+    public void ResolveAgainstPlayer(
+        SpellInstance spellInstance,
+        PlayerState targetPlayer,
+        PlayerState caster
+    )
+    {
+        if (
+            spellInstance == null
+            || spellInstance.definition == null
+            || targetPlayer == null
+            || caster == null
+        )
+        {
+            Debug.LogError("SpellResolver: datos inválidos al resolver hechizo contra jugador.");
+
+            return;
+        }
+
+        SpellDefinition spell = spellInstance.definition;
+
+        switch (spell.effectType)
+        {
+            case SpellEffectType.Damage:
+                ResolveDamageToPlayer(spellInstance, targetPlayer, caster);
+                break;
+
+            default:
+                Debug.LogWarning($"{spell.spellName} todavía no está preparado para PvP.");
+                break;
+        }
+    }
+
+    private void ResolveDamage(
+        SpellInstance spellInstance,
+        CreatureView targetCreature,
+        PlayerState caster
+    )
     {
         if (targetCreature == null)
         {
@@ -193,7 +229,11 @@ public class SpellResolver : MonoBehaviour
         }
     }
 
-    private void ResolveCreatureDeath(CreatureView creatureView, CreatureInstance creature, PlayerState caster)
+    private void ResolveCreatureDeath(
+        CreatureView creatureView,
+        CreatureInstance creature,
+        PlayerState caster
+    )
     {
         CreatureDefinition definition = creature.definition;
 
@@ -246,7 +286,11 @@ public class SpellResolver : MonoBehaviour
         }
     }
 
-    private void ResolveDrain(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
+    private void ResolveDrain(
+        SpellInstance spellInstance,
+        CreatureView targetCreature,
+        PlayerState caster
+    )
     {
         if (targetCreature == null)
         {
@@ -296,7 +340,11 @@ public class SpellResolver : MonoBehaviour
         ResolveCounterAttack(creature, caster);
     }
 
-    private void ResolveWindWhip(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
+    private void ResolveWindWhip(
+        SpellInstance spellInstance,
+        CreatureView targetCreature,
+        PlayerState caster
+    )
     {
         if (targetCreature == null)
         {
@@ -343,7 +391,11 @@ public class SpellResolver : MonoBehaviour
         ResolveCounterAttack(creature, caster);
     }
 
-    private void ResolveRoots(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
+    private void ResolveRoots(
+        SpellInstance spellInstance,
+        CreatureView targetCreature,
+        PlayerState caster
+    )
     {
         if (targetCreature == null)
         {
@@ -393,7 +445,11 @@ public class SpellResolver : MonoBehaviour
         );
     }
 
-    private void ResolveAcidExplosion(SpellInstance spellInstance, CreatureView targetCreature, PlayerState caster)
+    private void ResolveAcidExplosion(
+        SpellInstance spellInstance,
+        CreatureView targetCreature,
+        PlayerState caster
+    )
     {
         if (creaturePanel == null)
         {
@@ -497,5 +553,80 @@ public class SpellResolver : MonoBehaviour
         }
 
         illusionChoicePanel.ShowChoices(revealedIngredients, keepAmount);
+    }
+
+    private void ResolveDamageToPlayer(
+        SpellInstance spellInstance,
+        PlayerState targetPlayer,
+        PlayerState caster
+    )
+    {
+        SpellDefinition spell = spellInstance.definition;
+
+        int damage = spell.GetEffectValue(spellInstance.level);
+
+        int damageToHealth = 0;
+        int damageToShield = 0;
+
+        ShieldPiercingType piercing = spell.GetShieldPiercing(spellInstance.level);
+
+        switch (piercing)
+        {
+            case ShieldPiercingType.None:
+            {
+                int absorbed = Mathf.Min(targetPlayer.shield, damage);
+
+                targetPlayer.shield -= absorbed;
+                damageToShield = absorbed;
+
+                damageToHealth = damage - absorbed;
+
+                break;
+            }
+
+            case ShieldPiercingType.IgnoreOne:
+            {
+                // 1 punto atraviesa directamente el escudo.
+                int piercingDamage = Mathf.Min(1, damage);
+
+                damageToHealth += piercingDamage;
+
+                int remainingDamage = damage - piercingDamage;
+
+                int absorbed = Mathf.Min(targetPlayer.shield, remainingDamage);
+
+                targetPlayer.shield -= absorbed;
+                damageToShield = absorbed;
+
+                damageToHealth += remainingDamage - absorbed;
+
+                break;
+            }
+
+            case ShieldPiercingType.IgnoreAll:
+            {
+                damageToHealth = damage;
+
+                break;
+            }
+        }
+
+        targetPlayer.currentHP -= damageToHealth;
+
+        targetPlayer.currentHP = Mathf.Max(0, targetPlayer.currentHP);
+
+        Debug.Log(
+            $"{caster.gameObject.name} lanza {spell.spellName} "
+                + $"contra {targetPlayer.gameObject.name}. "
+                + $"Escudo perdido: {damageToShield}. "
+                + $"Vida perdida: {damageToHealth}. "
+                + $"Vida restante: {targetPlayer.currentHP}/{targetPlayer.maxHP}. "
+                + $"Escudo restante: {targetPlayer.shield}."
+        );
+
+        if (playerStatusView != null)
+        {
+            playerStatusView.Refresh();
+        }
     }
 }
