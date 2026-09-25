@@ -29,20 +29,12 @@ public class SpellBookView : MonoBehaviour
     [SerializeField]
     private TMP_Text pageIndicator;
 
+    [Header("References")]
     [SerializeField]
     private IngredientInventoryView inventoryView;
 
     [SerializeField]
     private CreatureSelectionManager creatureSelectionManager;
-
-    [SerializeField]
-    private PlayerStatusView playerStatusView;
-
-    [SerializeField]
-    private SelectedCreatureView selectedCreatureView;
-
-    [SerializeField]
-    private CreaturePanel creaturePanel;
 
     [SerializeField]
     private SpellResolver spellResolver;
@@ -60,6 +52,7 @@ public class SpellBookView : MonoBehaviour
         player.inventory.OnChanged += RefreshBook;
 
         previousButton.onClick.AddListener(PreviousPage);
+
         nextButton.onClick.AddListener(NextPage);
 
         RefreshBook();
@@ -68,46 +61,17 @@ public class SpellBookView : MonoBehaviour
     public void RefreshBook()
     {
         if (spells == null || spells.Count == 0)
+        {
             return;
+        }
 
         int leftIndex = currentSpreadIndex * 2;
+
         int rightIndex = leftIndex + 1;
 
-        if (leftIndex < spells.Count)
-        {
-            leftPage.gameObject.SetActive(true);
-            leftPage.SetPlayer(player);
-            leftPage.SetInventoryView(inventoryView);
-            leftPage.Setup(spells[leftIndex]);
-            leftPage.SetCreatureSelectionManager(creatureSelectionManager);
-            leftPage.SetPlayerStatusView(playerStatusView);
-            leftPage.SetSelectedCreatureView(selectedCreatureView);
-            leftPage.SetCreaturePanel(creaturePanel);
-            leftPage.SetSpellResolver(spellResolver);
-            leftPage.SetPlayerTargetSelectionManager(playerTargetSelectionManager);
-        }
-        else
-        {
-            leftPage.gameObject.SetActive(false);
-        }
+        SetupPage(leftPage, leftIndex);
 
-        if (rightIndex < spells.Count)
-        {
-            rightPage.gameObject.SetActive(true);
-            rightPage.SetPlayer(player);
-            rightPage.SetInventoryView(inventoryView);
-            rightPage.Setup(spells[rightIndex]);
-            rightPage.SetCreatureSelectionManager(creatureSelectionManager);
-            rightPage.SetPlayerStatusView(playerStatusView);
-            rightPage.SetSelectedCreatureView(selectedCreatureView);
-            rightPage.SetCreaturePanel(creaturePanel);
-            rightPage.SetSpellResolver(spellResolver);
-            rightPage.SetPlayerTargetSelectionManager(playerTargetSelectionManager);
-        }
-        else
-        {
-            rightPage.gameObject.SetActive(false);
-        }
+        SetupPage(rightPage, rightIndex);
 
         int totalSpreads = Mathf.CeilToInt(spells.Count / 2f);
 
@@ -118,6 +82,30 @@ public class SpellBookView : MonoBehaviour
         nextButton.interactable = currentSpreadIndex < totalSpreads - 1;
     }
 
+    private void SetupPage(SpellPageView page, int spellIndex)
+    {
+        if (spellIndex >= spells.Count)
+        {
+            page.gameObject.SetActive(false);
+
+            return;
+        }
+
+        page.gameObject.SetActive(true);
+
+        page.SetPlayer(player);
+
+        page.SetInventoryView(inventoryView);
+
+        page.SetCreatureSelectionManager(creatureSelectionManager);
+
+        page.SetSpellResolver(spellResolver);
+
+        page.SetPlayerTargetSelectionManager(playerTargetSelectionManager);
+
+        page.Setup(spells[spellIndex]);
+    }
+
     public void NextPage()
     {
         int totalSpreads = Mathf.CeilToInt(spells.Count / 2f);
@@ -125,6 +113,7 @@ public class SpellBookView : MonoBehaviour
         if (currentSpreadIndex < totalSpreads - 1)
         {
             currentSpreadIndex++;
+
             RefreshBook();
         }
     }
@@ -134,6 +123,7 @@ public class SpellBookView : MonoBehaviour
         if (currentSpreadIndex > 0)
         {
             currentSpreadIndex--;
+
             RefreshBook();
         }
     }

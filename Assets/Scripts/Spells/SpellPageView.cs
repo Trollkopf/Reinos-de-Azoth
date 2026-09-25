@@ -51,19 +51,9 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     [SerializeField]
     private CreatureSelectionManager creatureSelectionManager;
 
-    // Las mantenemos de momento porque SpellBookView
-    // probablemente sigue usando sus setters.
-    [SerializeField]
-    private PlayerStatusView playerStatusView;
-
-    [SerializeField]
-    private SelectedCreatureView selectedCreatureView;
-
     private PlayerTargetSelectionManager playerTargetSelectionManager;
 
     private SpellInstance spellInstance;
-
-    private CreaturePanel creaturePanel;
 
     private SpellResolver spellResolver;
 
@@ -341,21 +331,6 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     public void SetCreatureSelectionManager(CreatureSelectionManager manager)
     {
         creatureSelectionManager = manager;
-    }
-
-    public void SetPlayerStatusView(PlayerStatusView statusView)
-    {
-        playerStatusView = statusView;
-    }
-
-    public void SetSelectedCreatureView(SelectedCreatureView creatureView)
-    {
-        selectedCreatureView = creatureView;
-    }
-
-    public void SetCreaturePanel(CreaturePanel newCreaturePanel)
-    {
-        creaturePanel = newCreaturePanel;
     }
 
     public void SetSpellResolver(SpellResolver resolver)
