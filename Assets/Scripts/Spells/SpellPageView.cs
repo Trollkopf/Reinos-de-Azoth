@@ -51,6 +51,8 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     [SerializeField]
     private CreatureSelectionManager creatureSelectionManager;
 
+    // Las mantenemos de momento porque SpellBookView
+    // probablemente sigue usando sus setters.
     [SerializeField]
     private PlayerStatusView playerStatusView;
 
@@ -84,9 +86,24 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         SpellDefinition definition = spellInstance.definition;
 
         spellNameText.text = definition.spellName;
+
         levelText.text = $"Nv. {spellInstance.level}";
+
         descriptionText.text = definition.GetDescription(spellInstance.level);
 
+        RefreshMastery();
+
+        if (definition.artwork != null)
+        {
+            artwork.sprite = definition.artwork;
+        }
+
+        RefreshCost();
+        UpdateAvailability();
+    }
+
+    private void RefreshMastery()
+    {
         int requirement = spellInstance.GetNextMasteryRequirement();
 
         masteryText.text =
@@ -97,19 +114,10 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         if (spellInstance.level >= 3)
         {
             masteryFill.fillAmount = 1f;
-        }
-        else
-        {
-            masteryFill.fillAmount = (float)spellInstance.mastery / requirement;
+            return;
         }
 
-        if (definition.artwork != null)
-        {
-            artwork.sprite = definition.artwork;
-        }
-
-        RefreshCost();
-        UpdateAvailability();
+        masteryFill.fillAmount = (float)spellInstance.mastery / requirement;
     }
 
     private void RefreshCost()
@@ -135,13 +143,12 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     private void UpdateAvailability()
     {
         if (player == null || spellInstance == null)
+        {
             return;
+        }
 
-        bool canAfford = player.inventory.CanAfford(spellInstance.definition);
+        bool available = player.inventory.CanAfford(spellInstance.definition);
 
-        bool available = canAfford;
-
-        // La página siempre permanece opaca
         CanvasGroup canvasGroup = GetComponent<CanvasGroup>();
 
         if (canvasGroup == null)
@@ -149,9 +156,10 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
 
+        // La página permanece opaca.
         canvasGroup.alpha = 1f;
 
-        // Atenuamos solo el artwork
+        // Solo atenuamos el artwork.
         if (artwork != null)
         {
             Color artworkColor = artwork.color;
@@ -161,13 +169,11 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
             artwork.color = artworkColor;
         }
 
-        // Mostramos u ocultamos el overlay
         if (unavailableOverlay != null)
         {
             unavailableOverlay.SetActive(!available);
         }
 
-        // Texto según el motivo
         if (unavailableText != null && !available)
         {
             unavailableText.text = "Ingredientes insuficientes";
@@ -181,12 +187,13 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
 
     private void TryCastSpell()
     {
-        if (spellInstance == null || player == null)
+        if (spellInstance == null || player == null || spellResolver == null)
+        {
             return;
+        }
 
         SpellDefinition definition = spellInstance.definition;
 
-        // Comprobar ingredientes
         if (!player.inventory.CanAfford(definition))
         {
             Debug.Log($"No tienes ingredientes suficientes para lanzar {definition.spellName}.");
@@ -194,69 +201,22 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
             return;
         }
 
-        // Si el hechizo necesita objetivo criatura, comprobamos que exista.
-        bool canTargetCreature =
-            definition.effectType == SpellEffectType.Damage
-            || definition.effectType == SpellEffectType.Drain
-            || definition.effectType == SpellEffectType.WindWhip
-            || definition.effectType == SpellEffectType.Roots;
+        CreatureView targetCreature = GetSelectedCreature();
 
-        bool canTargetPlayer =
-            definition.effectType == SpellEffectType.Damage
-            || definition.effectType == SpellEffectType.Drain;
+        PlayerState targetPlayer = GetSelectedPlayer();
 
-        bool hasCreatureTarget =
-            creatureSelectionManager != null && creatureSelectionManager.SelectedCreature != null;
-
-        bool hasPlayerTarget =
-            playerTargetSelectionManager != null
-            && playerTargetSelectionManager.SelectedPlayer != null;
-
-        if (canTargetCreature && canTargetPlayer && !hasCreatureTarget && !hasPlayerTarget)
+        if (!HasValidTarget(definition, targetCreature, targetPlayer))
         {
-            Debug.Log(
-                $"Selecciona una criatura o un jugador antes de lanzar {definition.spellName}."
-            );
-
             return;
         }
 
-        if (canTargetCreature && !canTargetPlayer && !hasCreatureTarget)
-        {
-            Debug.Log($"Selecciona una criatura antes de lanzar {definition.spellName}.");
-
-            return;
-        }
-
-        // Gastar ingredientes
         bool spent = player.inventory.Spend(definition);
 
         if (!spent)
             return;
 
-        // Resolver el hechizo
-        CreatureView targetCreature =
-            creatureSelectionManager != null ? creatureSelectionManager.SelectedCreature : null;
+        ResolveSpell(definition, targetCreature, targetPlayer);
 
-        PlayerState targetPlayer =
-            playerTargetSelectionManager != null
-                ? playerTargetSelectionManager.SelectedPlayer
-                : null;
-
-        canTargetPlayer =
-            definition.effectType == SpellEffectType.Damage
-            || definition.effectType == SpellEffectType.Drain;
-
-        if (canTargetPlayer && targetPlayer != null)
-        {
-            spellResolver.ResolveAgainstPlayer(spellInstance, targetPlayer, player);
-        }
-        else
-        {
-            spellResolver.Resolve(spellInstance, targetCreature, player);
-        }
-
-        // Aumentar maestría
         spellInstance.AddMastery();
 
         Debug.Log(
@@ -268,6 +228,92 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         DebugInventory();
 
         Refresh();
+    }
+
+    private CreatureView GetSelectedCreature()
+    {
+        if (creatureSelectionManager == null)
+            return null;
+
+        return creatureSelectionManager.SelectedCreature;
+    }
+
+    private PlayerState GetSelectedPlayer()
+    {
+        if (playerTargetSelectionManager == null)
+        {
+            return null;
+        }
+
+        return playerTargetSelectionManager.SelectedPlayer;
+    }
+
+    private bool HasValidTarget(
+        SpellDefinition definition,
+        CreatureView targetCreature,
+        PlayerState targetPlayer
+    )
+    {
+        bool canTargetCreature = CanTargetCreature(definition.effectType);
+
+        bool canTargetPlayer = CanTargetPlayer(definition.effectType);
+
+        bool hasCreatureTarget = targetCreature != null;
+
+        bool hasPlayerTarget = targetPlayer != null;
+
+        // Hechizos que pueden ir
+        // a criatura o jugador.
+        if (canTargetCreature && canTargetPlayer && !hasCreatureTarget && !hasPlayerTarget)
+        {
+            Debug.Log(
+                $"Selecciona una criatura o un jugador antes de lanzar {definition.spellName}."
+            );
+
+            return false;
+        }
+
+        // Hechizos que por ahora
+        // solo pueden ir a criatura.
+        if (canTargetCreature && !canTargetPlayer && !hasCreatureTarget)
+        {
+            Debug.Log($"Selecciona una criatura antes de lanzar {definition.spellName}.");
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool CanTargetCreature(SpellEffectType effectType)
+    {
+        return effectType == SpellEffectType.Damage
+            || effectType == SpellEffectType.Drain
+            || effectType == SpellEffectType.WindWhip
+            || effectType == SpellEffectType.Roots;
+    }
+
+    private bool CanTargetPlayer(SpellEffectType effectType)
+    {
+        return effectType == SpellEffectType.Damage || effectType == SpellEffectType.Drain;
+    }
+
+    private void ResolveSpell(
+        SpellDefinition definition,
+        CreatureView targetCreature,
+        PlayerState targetPlayer
+    )
+    {
+        bool usePlayerTarget = CanTargetPlayer(definition.effectType) && targetPlayer != null;
+
+        if (usePlayerTarget)
+        {
+            spellResolver.ResolveAgainstPlayer(spellInstance, targetPlayer, player);
+
+            return;
+        }
+
+        spellResolver.Resolve(spellInstance, targetCreature, player);
     }
 
     private void DebugInventory()
@@ -307,102 +353,9 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         selectedCreatureView = creatureView;
     }
 
-    private void AttackSelectedCreature(SpellDefinition spell)
-    {
-        CreatureView creatureView = creatureSelectionManager.SelectedCreature;
-
-        if (creatureView == null)
-            return;
-
-        CreatureInstance creature = creatureView.GetCreatureInstance();
-
-        if (creature == null || creature.IsDead)
-            return;
-
-        int damage = spell.GetEffectValue(spellInstance.level);
-
-        creature.TakeDamage(damage);
-
-        Debug.Log(
-            $"{spell.spellName} hace {damage} de daño a " + $"{creature.definition.creatureName}."
-        );
-
-        creatureView.Refresh();
-
-        if (selectedCreatureView != null)
-        {
-            selectedCreatureView.Refresh();
-        }
-
-        // Si ha muerto, no contraataca.
-        if (creature.IsDead)
-        {
-            ResolveCreatureDeath(creatureView, creature);
-
-            return;
-        }
-
-        CreatureCounterAttack(creature);
-    }
-
-    private void CreatureCounterAttack(CreatureInstance creature)
-    {
-        int damage = creature.definition.attack;
-
-        player.currentHP -= damage;
-
-        if (player.currentHP < 0)
-        {
-            player.currentHP = 0;
-        }
-
-        Debug.Log(
-            $"{creature.definition.creatureName} contraataca " + $"y causa {damage} de daño."
-        );
-
-        if (playerStatusView != null)
-        {
-            playerStatusView.Refresh();
-        }
-    }
-
     public void SetCreaturePanel(CreaturePanel newCreaturePanel)
     {
         creaturePanel = newCreaturePanel;
-    }
-
-    private void ResolveCreatureDeath(CreatureView creatureView, CreatureInstance creature)
-    {
-        CreatureDefinition definition = creature.definition;
-
-        Debug.Log($"{definition.creatureName} ha sido derrotado.");
-
-        // Recompensas
-        player.coins += definition.coinReward;
-        player.arcanePower += definition.arcanePowerReward;
-
-        Debug.Log(
-            $"Recompensa: +{definition.coinReward} monedas, "
-                + $"+{definition.arcanePowerReward} Poder Arcano."
-        );
-
-        // Refrescar estado del jugador
-        if (playerStatusView != null)
-        {
-            playerStatusView.Refresh();
-        }
-
-        // Limpiar selección
-        if (creatureSelectionManager != null)
-        {
-            creatureSelectionManager.ClearSelection();
-        }
-
-        // Reemplazar la criatura por una nueva
-        if (creaturePanel != null)
-        {
-            creaturePanel.ReplaceCreature(creatureView);
-        }
     }
 
     public void SetSpellResolver(SpellResolver resolver)
