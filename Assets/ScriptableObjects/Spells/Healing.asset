@@ -24,8 +24,15 @@ MonoBehaviour:
 
 '
   level2Description: "Recupera 3 PV.\r"
-  level3Description: Recupera 4 PV y elimina 1 estado negativo.
+  level3Description: Recupera 4 PV y elimina todos tus estados negativos.
   effectType: 1
   level1Value: 2
   level2Value: 3
   level3Value: 4
+  level1SecondaryValue: 0
+  level2SecondaryValue: 0
+  level3SecondaryValue: 0
+  level1ShieldPiercing: 0
+  level2ShieldPiercing: 0
+  level3ShieldPiercing: 0
+  appliesBurnAtLevel3: 0

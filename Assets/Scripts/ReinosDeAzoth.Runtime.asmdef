@@ -1,0 +1,8 @@
+﻿{
+  "name": "ReinosDeAzoth.Runtime",
+  "references": [
+    "Unity.TextMeshPro",
+    "UnityEngine.UI"
+  ],
+  "autoReferenced": true
+}

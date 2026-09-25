@@ -62,7 +62,5 @@ public class PlayerStatusEffects
         spellLimitThisTurn = -1;
 
         corroded = false;
-
-        reflectNextDamage = false;
     }
 }

@@ -1974,6 +1974,7 @@ MonoBehaviour:
   ingredientDeck: {fileID: 147997594}
   illusionChoicePanel: {fileID: 153549074}
   botTargetView: {fileID: 1999927111}
+  playerManager: {fileID: 1463436318}
 --- !u!4 &328301641
 Transform:
   m_ObjectHideFlags: 0

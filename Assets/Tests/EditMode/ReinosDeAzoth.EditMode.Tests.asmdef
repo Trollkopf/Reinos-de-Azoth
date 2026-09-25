@@ -1,0 +1,13 @@
+﻿{
+  "name": "ReinosDeAzoth.EditMode.Tests",
+  "references": [
+    "ReinosDeAzoth.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false
+}

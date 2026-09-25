@@ -27,6 +27,9 @@ public class SpellResolver : MonoBehaviour
     [SerializeField]
     private PlayerTargetView botTargetView;
 
+    [SerializeField]
+    private PlayerManager playerManager;
+
     public void Resolve(
         SpellInstance spellInstance,
         CreatureView targetCreature,
@@ -151,6 +154,10 @@ public class SpellResolver : MonoBehaviour
             case SpellEffectType.Roots:
                 ResolveRootsAgainstPlayer(spellInstance, targetPlayer, caster);
 
+                break;
+
+            case SpellEffectType.AcidExplosion:
+                ResolveAcidExplosionAgainstPlayers(spellInstance, caster);
                 break;
 
             default:
@@ -299,5 +306,26 @@ public class SpellResolver : MonoBehaviour
     private PlayerSpellResolver CreatePlayerResolver()
     {
         return new PlayerSpellResolver(playerStatusView, botTargetView, ingredientDeck);
+    }
+
+    private void ResolveAcidExplosionAgainstPlayers(SpellInstance spellInstance, PlayerState caster)
+    {
+        if (playerManager == null)
+        {
+            Debug.LogError("SpellResolver: PlayerManager no está asignado.");
+
+            return;
+        }
+
+        List<PlayerState> opponents = playerManager.GetOpponents(caster);
+
+        foreach (PlayerState opponent in opponents)
+        {
+            if (opponent == null)
+                continue;
+
+            CreatePlayerResolver()
+                .ResolveAcidExplosionAgainstPlayer(spellInstance, opponent, caster);
+        }
     }
 }

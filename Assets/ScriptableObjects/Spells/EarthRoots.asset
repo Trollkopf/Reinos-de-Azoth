@@ -20,10 +20,15 @@ MonoBehaviour:
     amount: 2
   - type: 1
     amount: 1
-  level1Description: "El objetivo queda Enraizado.\r\nEn su pr\xF3ximo turno solo
-    podr\xE1 lanzar un m\xE1ximo de 2 hechizos."
-  level2Description: "Como Nivel 1 y adem\xE1s recibe 1 de da\xF1o."
-  level3Description: "Como Nivel 1 y adem\xE1s recibe 2 de da\xF1o."
+  level1Description: "El objetivo queda Enraizado.\r\n(Alquimistas) El objetivo solo
+    puede lanzar 1 hechizo durante su pr\xF3ximo turno.\n(Criaturas) El objetivo
+    es incapaz de contraatacar durante el resto del turno"
+  level2Description: "(Alquimistas) Inflige 1 de da\xF1o y el objetivo solo puede
+    lanzar 1 hechizo durante su pr\xF3ximo turno.\n(Criaturas) Inflige 1 de da\xF1o
+    y el objetivo es incapaz de contraatacar durante el resto del turno"
+  level3Description: "(Alquimistas) Inflige 2 de da\xF1o y el objetivo solo puede
+    lanzar 1 hechizo durante su pr\xF3ximo turno.\n(Criaturas) Inflige 2 de da\xF1o
+    y el objetivo es incapaz de contraatacar durante el resto del turno"
   effectType: 6
   level1Value: 0
   level2Value: 1
@@ -34,3 +39,4 @@ MonoBehaviour:
   level1ShieldPiercing: 0
   level2ShieldPiercing: 0
   level3ShieldPiercing: 0
+  appliesBurnAtLevel3: 0

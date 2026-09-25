@@ -1,0 +1,12 @@
+﻿{
+  "name": "ReinosDeAzoth.PlayMode.Tests",
+  "references": [
+    "ReinosDeAzoth.Runtime",
+    "Unity.TextMeshPro",
+    "UnityEngine.UI"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false
+}
