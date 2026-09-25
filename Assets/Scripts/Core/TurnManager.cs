@@ -28,23 +28,32 @@ public class TurnManager : MonoBehaviour
     private BotController botController;
 
     private int turnNumber = 1;
+
     private bool isPlayerTurn = true;
 
     public void EndTurn()
     {
-        // Solo el jugador humano usa este botón
         if (!isPlayerTurn)
             return;
 
-        // No puede acabar con más de 7 ingredientes
         if (player.inventory.GetTotalCount() > PlayerState.MaxHandSize)
         {
-            Debug.Log("Debes descartar ingredientes antes de terminar el turno.");
+            Debug.Log(
+                $"Debes descartar ingredientes hasta tener "
+                    + $"{PlayerState.MaxHandSize} antes de terminar el turno."
+            );
 
             return;
         }
 
         Debug.Log("Termina el turno del jugador.");
+
+        player.EndTurn();
+
+        if (creaturePanel != null)
+        {
+            creaturePanel.ClearEndOfTurnEffects();
+        }
 
         isPlayerTurn = false;
 
@@ -54,6 +63,8 @@ public class TurnManager : MonoBehaviour
     private void StartTurn()
     {
         Debug.Log($"===== TURNO {turnNumber} DEL JUGADOR =====");
+
+        player.BeginTurn();
 
         ingredientDeck.DrawToPlayer(player, 1);
 
@@ -69,11 +80,12 @@ public class TurnManager : MonoBehaviour
     {
         Debug.Log("===== TURNO DEL BOT =====");
 
+        botPlayer.BeginTurn();
+
         ingredientDeck.DrawToPlayer(botPlayer, 1);
 
         botController.StartBotTurn();
 
-        // De momento el bot termina automáticamente
         EndBotTurn();
     }
 
@@ -82,6 +94,13 @@ public class TurnManager : MonoBehaviour
         botController.DiscardDownToHandLimit();
 
         Debug.Log("Termina el turno del bot.");
+
+        botPlayer.EndTurn();
+
+        if (creaturePanel != null)
+        {
+            creaturePanel.ClearEndOfTurnEffects();
+        }
 
         isPlayerTurn = true;
 

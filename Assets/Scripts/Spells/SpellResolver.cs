@@ -36,12 +36,14 @@ public class SpellResolver : MonoBehaviour
         if (caster == null)
         {
             Debug.LogError("SpellResolver: caster es NULL.");
+
             return;
         }
 
         if (spellInstance == null)
         {
-            Debug.LogError("SpellResolver: spellInstance es NULL");
+            Debug.LogError("SpellResolver: spellInstance es NULL.");
+
             return;
         }
 
@@ -60,40 +62,49 @@ public class SpellResolver : MonoBehaviour
                 Debug.Log("Resolviendo DAMAGE");
 
                 ResolveDamage(spellInstance, targetCreature, caster);
+
                 break;
 
             case SpellEffectType.Heal:
                 Debug.Log("Resolviendo HEAL");
 
                 ResolveHeal(spellInstance, caster);
+
                 break;
 
             case SpellEffectType.Shield:
                 ResolveShield(spellInstance, caster);
+
                 break;
 
             case SpellEffectType.Drain:
                 ResolveDrain(spellInstance, targetCreature, caster);
+
                 break;
 
             case SpellEffectType.WindWhip:
                 ResolveWindWhip(spellInstance, targetCreature, caster);
+
                 break;
 
             case SpellEffectType.Roots:
                 ResolveRoots(spellInstance, targetCreature, caster);
+
                 break;
 
             case SpellEffectType.AcidExplosion:
                 ResolveAcidExplosion(spellInstance, targetCreature, caster);
+
                 break;
 
             case SpellEffectType.Illusion:
                 ResolveIllusion(spellInstance);
+
                 break;
 
             default:
-                Debug.LogWarning($"EffectType todavía no implementado: {spell.effectType}");
+                Debug.LogWarning($"EffectType todavía no implementado: " + $"{spell.effectType}");
+
                 break;
         }
     }
@@ -111,7 +122,9 @@ public class SpellResolver : MonoBehaviour
             || caster == null
         )
         {
-            Debug.LogError("SpellResolver: datos inválidos al resolver hechizo contra jugador.");
+            Debug.LogError(
+                "SpellResolver: datos inválidos al resolver " + "hechizo contra jugador."
+            );
 
             return;
         }
@@ -122,13 +135,27 @@ public class SpellResolver : MonoBehaviour
         {
             case SpellEffectType.Damage:
                 ResolveDamageToPlayer(spellInstance, targetPlayer, caster);
+
                 break;
+
             case SpellEffectType.Drain:
                 ResolveDrainAgainstPlayer(spellInstance, targetPlayer, caster);
+
+                break;
+
+            case SpellEffectType.WindWhip:
+                ResolveWindWhipAgainstPlayer(spellInstance, targetPlayer, caster);
+
+                break;
+
+            case SpellEffectType.Roots:
+                ResolveRootsAgainstPlayer(spellInstance, targetPlayer, caster);
+
                 break;
 
             default:
                 Debug.LogWarning($"{spell.spellName} todavía no está preparado para PvP.");
+
                 break;
         }
     }
@@ -188,11 +215,6 @@ public class SpellResolver : MonoBehaviour
         CreateCreatureResolver().ResolveAcidExplosion(spellInstance, targetCreature, caster);
     }
 
-    private int CalculateCreatureDamage(CreatureInstance creature, int baseDamage)
-    {
-        return SpellDamageCalculator.CalculateCreatureDamage(creature, baseDamage);
-    }
-
     private void ResolveIllusion(SpellInstance spellInstance)
     {
         if (ingredientDeck == null)
@@ -245,6 +267,24 @@ public class SpellResolver : MonoBehaviour
         CreatePlayerResolver().ResolveDrainAgainstPlayer(spellInstance, targetPlayer, caster);
     }
 
+    private void ResolveWindWhipAgainstPlayer(
+        SpellInstance spellInstance,
+        PlayerState targetPlayer,
+        PlayerState caster
+    )
+    {
+        CreatePlayerResolver().ResolveWindWhipAgainstPlayer(spellInstance, targetPlayer, caster);
+    }
+
+    private void ResolveRootsAgainstPlayer(
+        SpellInstance spellInstance,
+        PlayerState targetPlayer,
+        PlayerState caster
+    )
+    {
+        CreatePlayerResolver().ResolveRootsAgainstPlayer(spellInstance, targetPlayer, caster);
+    }
+
     private CreatureSpellResolver CreateCreatureResolver()
     {
         return new CreatureSpellResolver(
@@ -258,6 +298,6 @@ public class SpellResolver : MonoBehaviour
 
     private PlayerSpellResolver CreatePlayerResolver()
     {
-        return new PlayerSpellResolver(playerStatusView, botTargetView);
+        return new PlayerSpellResolver(playerStatusView, botTargetView, ingredientDeck);
     }
 }

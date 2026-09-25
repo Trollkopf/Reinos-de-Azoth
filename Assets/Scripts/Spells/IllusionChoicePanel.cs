@@ -20,6 +20,9 @@ public class IllusionChoicePanel : MonoBehaviour
     [SerializeField]
     private TMP_Text titleText;
 
+    [SerializeField]
+    private IngredientDeck ingredientDeck;
+
     private int maxSelections;
     private int currentSelections;
 
@@ -31,6 +34,7 @@ public class IllusionChoicePanel : MonoBehaviour
         revealedIngredients.AddRange(ingredients);
 
         maxSelections = keepAmount;
+
         currentSelections = 0;
 
         ClearOptions();
@@ -55,9 +59,18 @@ public class IllusionChoicePanel : MonoBehaviour
     public void SelectIngredient(IngredientType ingredient, IllusionOptionView optionView)
     {
         if (currentSelections >= maxSelections)
+        {
             return;
+        }
 
         player.inventory.Add(ingredient, 1);
+
+        /*
+         * Quitamos SOLO una aparición.
+         * Esto es importante si Ilusión
+         * revela dos ingredientes iguales.
+         */
+        revealedIngredients.Remove(ingredient);
 
         currentSelections++;
 
@@ -67,8 +80,39 @@ public class IllusionChoicePanel : MonoBehaviour
 
         if (currentSelections >= maxSelections)
         {
+            DiscardRemainingIngredients();
+
             ClosePanel();
         }
+    }
+
+    private void DiscardRemainingIngredients()
+    {
+        if (revealedIngredients.Count == 0)
+        {
+            return;
+        }
+
+        if (ingredientDeck == null)
+        {
+            Debug.LogWarning(
+                "IllusionChoicePanel: IngredientDeck no está asignado. "
+                    + "Los ingredientes no elegidos no han podido ir al descarte."
+            );
+
+            return;
+        }
+
+        foreach (IngredientType ingredient in revealedIngredients)
+        {
+            ingredientDeck.Discard(ingredient);
+
+            Debug.Log($"Ilusión: {ingredient} va a la pila de descarte.");
+        }
+
+        revealedIngredients.Clear();
+
+        Debug.Log($"Pila de descartes: {ingredientDeck.GetDiscardCount()}.");
     }
 
     private void ClearOptions()
@@ -81,6 +125,8 @@ public class IllusionChoicePanel : MonoBehaviour
 
     private void ClosePanel()
     {
+        ClearOptions();
+
         gameObject.SetActive(false);
     }
 }

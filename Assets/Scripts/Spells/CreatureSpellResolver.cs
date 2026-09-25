@@ -2,7 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Resuelve efectos sobre criaturas, recompensas y contraataques en su orden original.
+/// Resuelve efectos sobre criaturas,
+/// recompensas y contraataques.
 /// </summary>
 internal sealed class CreatureSpellResolver
 {
@@ -51,12 +52,26 @@ internal sealed class CreatureSpellResolver
 
         creature.TakeDamage(damage);
 
-        targetCreature.Refresh();
-
-        if (selectedCreatureView != null)
+        // Bola de Fuego Nv.3:
+        // añade una acumulación independiente
+        // de Quemadura durante 2 turnos.
+        if (
+            spellInstance.level >= 3
+            && spellInstance.definition.appliesBurnAtLevel3
+            && !creature.IsDead
+            && creature.statusEffects != null
+        )
         {
-            selectedCreatureView.Refresh();
+            creature.statusEffects.AddBurn(caster);
+
+            Debug.Log(
+                $"{creature.definition.creatureName} recibe "
+                    + $"1 acumulación de Quemadura. "
+                    + $"Total: {creature.statusEffects.GetBurnCount()}."
+            );
         }
+
+        RefreshCreatureViews(targetCreature);
 
         Debug.Log(
             $"{spellInstance.definition.spellName} "
@@ -64,7 +79,6 @@ internal sealed class CreatureSpellResolver
                 + $"{creature.definition.creatureName}."
         );
 
-        // Si muere, damos recompensas y no contraataca
         if (creature.IsDead)
         {
             ResolveCreatureDeath(targetCreature, creature, caster);
@@ -72,12 +86,20 @@ internal sealed class CreatureSpellResolver
             return;
         }
 
-        // Si sobrevive, contraataca
         ResolveCounterAttack(creature, caster);
     }
 
     private void ResolveCounterAttack(CreatureInstance creature, PlayerState caster)
     {
+        if (creature.statusEffects != null && creature.statusEffects.rootedUntilEndOfTurn)
+        {
+            Debug.Log(
+                $"{creature.definition.creatureName} " + "está enraizada y no puede contraatacar."
+            );
+
+            return;
+        }
+
         int damage = creature.definition.attack;
 
         int remainingDamage = damage;
@@ -86,7 +108,8 @@ internal sealed class CreatureSpellResolver
         {
             int absorbed = Mathf.Min(caster.shield, remainingDamage);
 
-            caster.shield -= absorbed;
+            caster.RemoveShield(absorbed);
+
             remainingDamage -= absorbed;
 
             Debug.Log($"El Escudo Arcano absorbe {absorbed} de daño.");
@@ -94,16 +117,12 @@ internal sealed class CreatureSpellResolver
 
         if (remainingDamage > 0)
         {
-            caster.currentHP -= remainingDamage;
-
-            if (caster.currentHP < 0)
-            {
-                caster.currentHP = 0;
-            }
+            caster.TakeDamage(remainingDamage);
         }
 
         Debug.Log(
-            $"{creature.definition.creatureName} ataca por {damage}. "
+            $"{creature.definition.creatureName} "
+                + $"ataca por {damage}. "
                 + $"Daño recibido en vida: {remainingDamage}."
         );
 
@@ -123,9 +142,9 @@ internal sealed class CreatureSpellResolver
 
         Debug.Log($"{definition.creatureName} ha sido derrotado.");
 
-        caster.coins += definition.coinReward;
+        caster.AddCoins(definition.coinReward);
 
-        caster.arcanePower += definition.arcanePowerReward;
+        caster.AddArcanePower(definition.arcanePowerReward);
 
         Debug.Log(
             $"Recompensa: +{definition.coinReward} monedas, "
@@ -174,14 +193,9 @@ internal sealed class CreatureSpellResolver
 
         creature.TakeDamage(damage);
 
-        caster.currentHP = Mathf.Min(caster.currentHP + healing, caster.maxHP);
+        caster.Heal(healing);
 
-        targetCreature.Refresh();
-
-        if (selectedCreatureView != null)
-        {
-            selectedCreatureView.Refresh();
-        }
+        RefreshCreatureViews(targetCreature);
 
         if (playerStatusView != null)
         {
@@ -226,16 +240,10 @@ internal sealed class CreatureSpellResolver
 
         creature.TakeDamage(damage);
 
-        targetCreature.Refresh();
-
-        if (selectedCreatureView != null)
-        {
-            selectedCreatureView.Refresh();
-        }
+        RefreshCreatureViews(targetCreature);
 
         Debug.Log($"Látigo de Viento hace {damage} de daño.");
 
-        // Nivel 3: roba 1 ingrediente
         if (spellInstance.level >= 3 && ingredientDeck != null)
         {
             ingredientDeck.DrawToPlayer(caster, 1);
@@ -273,23 +281,26 @@ internal sealed class CreatureSpellResolver
 
         int baseDamage = spellInstance.definition.GetEffectValue(spellInstance.level);
 
-        int damage = baseDamage > 0 ? SpellDamageCalculator.CalculateCreatureDamage(creature, baseDamage) : 0;
+        int damage =
+            baseDamage > 0
+                ? SpellDamageCalculator.CalculateCreatureDamage(creature, baseDamage)
+                : 0;
 
         if (damage > 0)
         {
             creature.TakeDamage(damage);
         }
 
-        targetCreature.Refresh();
-
-        if (selectedCreatureView != null)
+        if (creature.statusEffects != null)
         {
-            selectedCreatureView.Refresh();
+            creature.statusEffects.rootedUntilEndOfTurn = true;
         }
+
+        RefreshCreatureViews(targetCreature);
 
         Debug.Log(
             $"{spellInstance.definition.spellName} "
-                + $"inmoviliza a {creature.definition.creatureName} "
+                + $"enraíza a {creature.definition.creatureName} "
                 + $"y hace {damage} de daño."
         );
 
@@ -300,10 +311,9 @@ internal sealed class CreatureSpellResolver
             return;
         }
 
-        // Raíces impide el contraataque
         Debug.Log(
             $"{creature.definition.creatureName} "
-                + $"no puede contraatacar por efecto de Raíces de Tierra."
+                + "no podrá contraatacar durante el resto del turno."
         );
     }
 
@@ -334,13 +344,20 @@ internal sealed class CreatureSpellResolver
             CreatureInstance creature = creatureView.GetCreatureInstance();
 
             if (creature == null || creature.IsDead)
+            {
                 continue;
+            }
 
             creature.TakeDamage(damage);
 
             if (spellInstance.level >= 3 && !creature.IsDead)
             {
                 creature.isCorroded = true;
+
+                if (creature.statusEffects != null)
+                {
+                    creature.statusEffects.corroded = true;
+                }
             }
 
             creatureView.Refresh();
@@ -355,12 +372,24 @@ internal sealed class CreatureSpellResolver
             }
         }
 
-        // Resolver las muertes después de recorrer todas
         foreach (CreatureView defeatedCreature in defeatedCreatures)
         {
             CreatureInstance creature = defeatedCreature.GetCreatureInstance();
 
             ResolveCreatureDeath(defeatedCreature, creature, caster);
+        }
+
+        if (selectedCreatureView != null)
+        {
+            selectedCreatureView.Refresh();
+        }
+    }
+
+    private void RefreshCreatureViews(CreatureView creatureView)
+    {
+        if (creatureView != null)
+        {
+            creatureView.Refresh();
         }
 
         if (selectedCreatureView != null)

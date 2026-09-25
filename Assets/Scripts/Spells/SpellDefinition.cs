@@ -39,6 +39,9 @@ public class SpellDefinition : ScriptableObject
     public ShieldPiercingType level2ShieldPiercing;
     public ShieldPiercingType level3ShieldPiercing;
 
+    [Header("Status Effects")]
+    public bool appliesBurnAtLevel3 = false;
+
     public int GetEffectValue(int level)
     {
         return level switch

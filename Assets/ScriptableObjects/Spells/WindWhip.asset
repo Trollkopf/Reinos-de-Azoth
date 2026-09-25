@@ -30,9 +30,10 @@ MonoBehaviour:
   level1Value: 2
   level2Value: 3
   level3Value: 3
-  level1SecondaryValue: 0
-  level2SecondaryValue: 0
-  level3SecondaryValue: 0
+  level1SecondaryValue: 1
+  level2SecondaryValue: 2
+  level3SecondaryValue: 3
   level1ShieldPiercing: 0
   level2ShieldPiercing: 0
   level3ShieldPiercing: 0
+  appliesBurnAtLevel3: 0

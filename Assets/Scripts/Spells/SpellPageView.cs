@@ -60,6 +60,7 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     public void Setup(SpellInstance instance)
     {
         spellInstance = instance;
+
         Refresh();
     }
 
@@ -89,6 +90,7 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         }
 
         RefreshCost();
+
         UpdateAvailability();
     }
 
@@ -104,6 +106,7 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         if (spellInstance.level >= 3)
         {
             masteryFill.fillAmount = 1f;
+
             return;
         }
 
@@ -137,7 +140,11 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
             return;
         }
 
-        bool available = player.inventory.CanAfford(spellInstance.definition);
+        bool canAfford = player.inventory.CanAfford(spellInstance.definition);
+
+        bool canCast = player.CanCastSpell();
+
+        bool available = canAfford && canCast;
 
         CanvasGroup canvasGroup = GetComponent<CanvasGroup>();
 
@@ -146,10 +153,8 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
             canvasGroup = gameObject.AddComponent<CanvasGroup>();
         }
 
-        // La página permanece opaca.
         canvasGroup.alpha = 1f;
 
-        // Solo atenuamos el artwork.
         if (artwork != null)
         {
             Color artworkColor = artwork.color;
@@ -166,7 +171,14 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
 
         if (unavailableText != null && !available)
         {
-            unavailableText.text = "Ingredientes insuficientes";
+            if (!canCast)
+            {
+                unavailableText.text = "Límite de hechizos alcanzado";
+            }
+            else
+            {
+                unavailableText.text = "Ingredientes insuficientes";
+            }
         }
     }
 
@@ -184,9 +196,20 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
 
         SpellDefinition definition = spellInstance.definition;
 
+        if (!player.CanCastSpell())
+        {
+            Debug.Log($"{player.gameObject.name} no puede lanzar más hechizos este turno.");
+
+            Refresh();
+
+            return;
+        }
+
         if (!player.inventory.CanAfford(definition))
         {
-            Debug.Log($"No tienes ingredientes suficientes para lanzar {definition.spellName}.");
+            Debug.Log(
+                $"No tienes ingredientes suficientes para lanzar " + $"{definition.spellName}."
+            );
 
             return;
         }
@@ -200,12 +223,14 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
             return;
         }
 
-        bool spent = player.inventory.Spend(definition);
+        bool spent = player.SpendIngredientsForSpell(definition);
 
         if (!spent)
             return;
 
         ResolveSpell(definition, targetCreature, targetPlayer);
+
+        player.RegisterSpellCast();
 
         spellInstance.AddMastery();
 
@@ -223,7 +248,9 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     private CreatureView GetSelectedCreature()
     {
         if (creatureSelectionManager == null)
+        {
             return null;
+        }
 
         return creatureSelectionManager.SelectedCreature;
     }
@@ -252,22 +279,19 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
 
         bool hasPlayerTarget = targetPlayer != null;
 
-        // Hechizos que pueden ir
-        // a criatura o jugador.
         if (canTargetCreature && canTargetPlayer && !hasCreatureTarget && !hasPlayerTarget)
         {
             Debug.Log(
-                $"Selecciona una criatura o un jugador antes de lanzar {definition.spellName}."
+                $"Selecciona una criatura o un jugador antes de lanzar "
+                    + $"{definition.spellName}."
             );
 
             return false;
         }
 
-        // Hechizos que por ahora
-        // solo pueden ir a criatura.
         if (canTargetCreature && !canTargetPlayer && !hasCreatureTarget)
         {
-            Debug.Log($"Selecciona una criatura antes de lanzar {definition.spellName}.");
+            Debug.Log($"Selecciona una criatura antes de lanzar " + $"{definition.spellName}.");
 
             return false;
         }
@@ -285,7 +309,11 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
 
     private bool CanTargetPlayer(SpellEffectType effectType)
     {
-        return effectType == SpellEffectType.Damage || effectType == SpellEffectType.Drain;
+        return effectType == SpellEffectType.Damage
+            || effectType == SpellEffectType.Drain
+            || effectType == SpellEffectType.WindWhip
+            || effectType == SpellEffectType.Roots
+            || effectType == SpellEffectType.AcidExplosion;
     }
 
     private void ResolveSpell(

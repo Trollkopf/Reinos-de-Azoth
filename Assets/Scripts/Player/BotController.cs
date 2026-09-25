@@ -22,6 +22,9 @@ public class BotController : MonoBehaviour
     [SerializeField]
     private PlayerManager playerManager;
 
+    [SerializeField]
+    private IngredientDeck ingredientDeck;
+
     private class OffensiveDecision
     {
         public SpellInstance spell;
@@ -49,6 +52,8 @@ public class BotController : MonoBehaviour
 
         EvaluateAvailableSpells();
 
+        TryIllusion();
+
         TryHeal();
 
         TryShield();
@@ -73,6 +78,15 @@ public class BotController : MonoBehaviour
 
     private bool TryCastOffensiveSpell()
     {
+        if (!player.CanCastSpell())
+        {
+            Debug.Log("Bot no puede lanzar más hechizos este turno.");
+
+            return false;
+        }
+
+        if (spellResolver == null || creaturePanel == null)
+            return false;
         if (spellResolver == null || creaturePanel == null)
             return false;
 
@@ -195,7 +209,7 @@ public class BotController : MonoBehaviour
             return false;
         }
 
-        bool spent = player.inventory.Spend(bestDecision.spell.definition);
+        bool spent = player.SpendIngredientsForSpell(bestDecision.spell.definition);
 
         if (!spent)
             return false;
@@ -242,7 +256,11 @@ public class BotController : MonoBehaviour
             spellResolver.Resolve(bestDecision.spell, bestDecision.creatureTarget, player);
         }
 
+        player.RegisterSpellCast();
+
         bestDecision.spell.AddMastery();
+
+        Debug.Log($"Bot ha lanzado {player.SpellsCastThisTurn} hechizo(s) este turno.");
 
         return true;
     }
@@ -432,6 +450,11 @@ public class BotController : MonoBehaviour
 
     private void TryHeal()
     {
+        if (!player.CanCastSpell())
+        {
+            return;
+        }
+
         // Si solo le falta 0 o 1 PV,
         // no gastamos recursos.
         if (player.currentHP > player.maxHP - 2)
@@ -465,6 +488,8 @@ public class BotController : MonoBehaviour
 
             spellResolver.Resolve(spell, null, player);
 
+            player.RegisterSpellCast();
+
             spell.AddMastery();
 
             return;
@@ -473,10 +498,17 @@ public class BotController : MonoBehaviour
 
     private void TryShield()
     {
+        if (!player.CanCastSpell())
+        {
+            return;
+        }
+
         // Si ya tiene bastante escudo,
         // no gastamos recursos.
         if (player.shield >= 3)
+        {
             return;
+        }
 
         foreach (SpellInstance spell in spellBook.Spells)
         {
@@ -503,6 +535,8 @@ public class BotController : MonoBehaviour
             Debug.Log($"Bot decide protegerse con " + $"{spell.definition.spellName}.");
 
             spellResolver.Resolve(spell, null, player);
+
+            player.RegisterSpellCast();
 
             spell.AddMastery();
 
@@ -704,5 +738,96 @@ public class BotController : MonoBehaviour
         }
 
         return score;
+    }
+
+    private void TryIllusion()
+    {
+        if (!player.CanCastSpell())
+        {
+            return;
+        }
+
+        if (ingredientDeck == null)
+        {
+            Debug.LogError("BotController: IngredientDeck no está asignado.");
+
+            return;
+        }
+
+        foreach (SpellInstance spell in spellBook.Spells)
+        {
+            if (spell == null || spell.definition == null)
+            {
+                continue;
+            }
+
+            if (spell.definition.effectType != SpellEffectType.Illusion)
+            {
+                continue;
+            }
+
+            if (!player.inventory.CanAfford(spell.definition))
+            {
+                continue;
+            }
+
+            int drawAmount = spell.definition.GetEffectValue(spell.level);
+
+            int keepAmount = spell.definition.GetSecondaryEffectValue(spell.level);
+
+            bool spent = player.inventory.Spend(spell.definition);
+
+            if (!spent)
+            {
+                return;
+            }
+
+            List<IngredientType> revealed = new List<IngredientType>();
+
+            for (int i = 0; i < drawAmount; i++)
+            {
+                IngredientType ingredient = ingredientDeck.Draw();
+
+                revealed.Add(ingredient);
+
+                Debug.Log($"Bot revela con Ilusión: {ingredient}");
+            }
+
+            revealed.Sort(
+                (a, b) => GetIngredientUsefulness(b).CompareTo(GetIngredientUsefulness(a))
+            );
+
+            int amountToKeep = Mathf.Min(keepAmount, revealed.Count);
+
+            for (int i = 0; i < revealed.Count; i++)
+            {
+                IngredientType ingredient = revealed[i];
+
+                if (i < amountToKeep)
+                {
+                    player.inventory.Add(ingredient, 1);
+
+                    Debug.Log($"Bot conserva {ingredient} gracias a Ilusión.");
+                }
+                else
+                {
+                    ingredientDeck.Discard(ingredient);
+
+                    Debug.Log($"Bot descarta {ingredient} revelado por Ilusión.");
+                }
+            }
+
+            player.RegisterSpellCast();
+
+            spell.AddMastery();
+
+            Debug.Log(
+                $"Bot lanza {spell.definition.spellName}. "
+                    + $"Revela {drawAmount}, conserva {amountToKeep}. "
+                    + $"Nivel: {spell.level}, Maestría: {spell.mastery}."
+            );
+
+            return;
+        }
     }
 }
