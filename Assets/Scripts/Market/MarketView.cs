@@ -30,14 +30,21 @@ public class MarketView : MonoBehaviour
 
     private void Awake()
     {
-        marketDeck.Initialize();
-        InitializeMarket();
+        EnsureInitialized();
     }
 
-    private void InitializeMarket()
+    public void EnsureInitialized()
     {
         if (visibleCards.Count > 0)
             return;
+
+        if (marketDeck == null)
+        {
+            Debug.LogError("MarketView: MarketDeck no está asignado.");
+            return;
+        }
+
+        marketDeck.Initialize();
 
         for (int i = 0; i < VisibleSlots; i++)
         {
@@ -60,6 +67,8 @@ public class MarketView : MonoBehaviour
 
     public void TryBuy(int slotIndex, PlayerState buyer)
     {
+        EnsureInitialized();
+
         if (buyer == null)
             return;
 
@@ -92,14 +101,24 @@ public class MarketView : MonoBehaviour
 
         ReplaceSlot(slotIndex);
 
-        inventoryView.Refresh();
+        // Estas vistas pertenecen al jugador humano.
+        // No hace falta refrescarlas cuando compra el bot.
+        if (buyer == player)
+        {
+            if (inventoryView != null)
+                inventoryView.Refresh();
 
-        playerStatusView.Refresh();
+            if (playerStatusView != null)
+                playerStatusView.Refresh();
+        }
     }
 
     private void ReplaceSlot(int slotIndex)
     {
         MarketCardDefinition newCard = marketDeck.Draw();
+
+        if (newCard == null)
+            return;
 
         visibleCards[slotIndex] = newCard;
 
@@ -113,11 +132,15 @@ public class MarketView : MonoBehaviour
 
     public int GetVisibleCardCount()
     {
+        EnsureInitialized();
+
         return visibleCards.Count;
     }
 
     public MarketCardDefinition GetCardAt(int index)
     {
+        EnsureInitialized();
+
         if (index < 0 || index >= visibleCards.Count)
         {
             return null;

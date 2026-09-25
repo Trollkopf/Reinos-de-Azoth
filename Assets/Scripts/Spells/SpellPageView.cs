@@ -195,8 +195,9 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         }
 
         // Si el hechizo necesita objetivo criatura, comprobamos que exista.
-        bool needsCreatureTarget =
-            definition.effectType == SpellEffectType.Drain
+        bool canTargetCreature =
+            definition.effectType == SpellEffectType.Damage
+            || definition.effectType == SpellEffectType.Drain
             || definition.effectType == SpellEffectType.WindWhip
             || definition.effectType == SpellEffectType.Roots;
 
@@ -211,18 +212,18 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
             playerTargetSelectionManager != null
             && playerTargetSelectionManager.SelectedPlayer != null;
 
-        if (needsCreatureTarget && !hasCreatureTarget)
-        {
-            Debug.Log($"Selecciona una criatura antes de lanzar {definition.spellName}.");
-
-            return;
-        }
-
-        if (canTargetPlayer && !hasCreatureTarget && !hasPlayerTarget)
+        if (canTargetCreature && canTargetPlayer && !hasCreatureTarget && !hasPlayerTarget)
         {
             Debug.Log(
                 $"Selecciona una criatura o un jugador antes de lanzar {definition.spellName}."
             );
+
+            return;
+        }
+
+        if (canTargetCreature && !canTargetPlayer && !hasCreatureTarget)
+        {
+            Debug.Log($"Selecciona una criatura antes de lanzar {definition.spellName}.");
 
             return;
         }

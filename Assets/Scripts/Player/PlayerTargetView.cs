@@ -19,10 +19,25 @@ public class PlayerTargetView : MonoBehaviour
     [SerializeField]
     private TMP_Text shieldText;
 
-
     private void Start()
     {
         Refresh();
+    }
+
+    private void OnEnable()
+    {
+        if (player != null)
+        {
+            player.OnStatsChanged += Refresh;
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (player != null)
+        {
+            player.OnStatsChanged -= Refresh;
+        }
     }
 
     public void RefreshView()

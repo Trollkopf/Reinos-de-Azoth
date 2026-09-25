@@ -7,8 +7,18 @@ public class CreatureSelectionManager : MonoBehaviour
     [SerializeField]
     private SelectedCreatureView selectedCreatureView;
 
+    [SerializeField]
+    private PlayerTargetSelectionManager playerTargetSelectionManager;
+
     public void SelectCreature(CreatureView creature)
     {
+        // Si seleccionamos una criatura,
+        // dejamos de tener jugador objetivo.
+        if (playerTargetSelectionManager != null)
+        {
+            playerTargetSelectionManager.ClearSelection();
+        }
+
         if (SelectedCreature != null)
         {
             SelectedCreature.SetSelected(false);
