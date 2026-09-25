@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: illusion
   spellName: "Ilusi\xF3n"
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 83c6038e2d389f849befedaabd465176, type: 3}
   cost:
   - type: 3
     amount: 1
@@ -36,3 +36,4 @@ MonoBehaviour:
   level1ShieldPiercing: 0
   level2ShieldPiercing: 0
   level3ShieldPiercing: 0
+  appliesBurnAtLevel3: 0

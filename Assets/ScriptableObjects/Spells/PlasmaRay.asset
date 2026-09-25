@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: plasmaray
   spellName: Rayo de Plasma
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 11bf0ecf4d4c2204fa0217a7e33ffe34, type: 3}
   cost:
   - type: 1
     amount: 1
@@ -33,3 +33,4 @@ MonoBehaviour:
   level1ShieldPiercing: 0
   level2ShieldPiercing: 1
   level3ShieldPiercing: 2
+  appliesBurnAtLevel3: 0

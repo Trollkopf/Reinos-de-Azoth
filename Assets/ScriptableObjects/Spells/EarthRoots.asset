@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: earthroot
   spellName: "Ra\xEDces de Tierra"
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: aa0d808c2b2e8a641bd4672859b057bd, type: 3}
   cost:
   - type: 2
     amount: 2

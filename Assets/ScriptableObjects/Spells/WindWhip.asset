@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: windwhip
   spellName: "L\xE1tigo de Viento"
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 248363a9a7f50a049830ccd45cb82348, type: 3}
   cost:
   - type: 3
     amount: 1

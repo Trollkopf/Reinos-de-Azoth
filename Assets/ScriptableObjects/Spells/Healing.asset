@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: healing
   spellName: "Curaci\xF3n"
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 0a00ba5e8c717aa449c2c49d730d9b5a, type: 3}
   cost:
   - type: 1
     amount: 1

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: lifedrain
   spellName: Drenaje Vital
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 54fcb594c1e43094c8c6c1511e1dde55, type: 3}
   cost:
   - type: 4
     amount: 1
@@ -33,3 +33,4 @@ MonoBehaviour:
   level1ShieldPiercing: 0
   level2ShieldPiercing: 0
   level3ShieldPiercing: 0
+  appliesBurnAtLevel3: 0

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: acidexplosion
   spellName: "Explosi\xF3n \xC1cida"
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: c1d5443acaef9f949a99b06d8e34f822, type: 3}
   cost:
   - type: 1
     amount: 1
@@ -34,3 +34,4 @@ MonoBehaviour:
   level1ShieldPiercing: 0
   level2ShieldPiercing: 0
   level3ShieldPiercing: 0
+  appliesBurnAtLevel3: 0
