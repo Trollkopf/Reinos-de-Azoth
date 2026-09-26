@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1158eeea387a5f4cbd9c84ae3a00004, type: 3}
   m_Name: IngredientIcons
   m_EditorClassIdentifier: 
-  redHerb: {fileID: 21300000, guid: 2183ac8ce074c7542aab5313532c92e9, type: 3}
-  pureWater: {fileID: 21300000, guid: 879daabbe0bc4534596cba9ab1e9ba1e, type: 3}
-  sulfurMineral: {fileID: 21300000, guid: dc8e39895435d7b4f93a744fa4cbc8f4, type: 3}
-  airCrystal: {fileID: 21300000, guid: aebf386754a098e41867c41a5b4c16d1, type: 3}
-  boneDust: {fileID: 21300000, guid: 12f7e3f2ad2038f40a7a7ffa63c9ce04, type: 3}
+  redHerb: {fileID: 21300000, guid: 00514fb1b609b9e449218da13c96ff53, type: 3}
+  pureWater: {fileID: 21300000, guid: 8712d6b49e53f704aa829547b0af5111, type: 3}
+  sulfurMineral: {fileID: 21300000, guid: 56dcaaf9aebdb1d448750253de4e1e85, type: 3}
+  airCrystal: {fileID: 21300000, guid: c7faeca1d27940c41bc5d3e03a85e30f, type: 3}
+  boneDust: {fileID: 21300000, guid: 6b28b895ba59d8245a3dcd47615126f6, type: 3}

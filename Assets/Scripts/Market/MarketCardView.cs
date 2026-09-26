@@ -5,7 +5,7 @@ using UnityEngine.UI;
 public class MarketCardView : MonoBehaviour
 {
     [SerializeField]
-    private TMP_Text ingredientText;
+    private Image artworkImage;
 
     [SerializeField]
     private TMP_Text amountText;
@@ -19,6 +19,9 @@ public class MarketCardView : MonoBehaviour
     private MarketCardDefinition definition;
     private MarketView marketView;
     private int slotIndex;
+
+    [SerializeField]
+    private IngredientIconDatabase ingredientIconDatabase;
 
     public void Setup(
         MarketCardDefinition newDefinition,
@@ -43,7 +46,10 @@ public class MarketCardView : MonoBehaviour
 
         gameObject.SetActive(true);
 
-        ingredientText.text = GetIngredientDisplayName(definition.ingredientType);
+        Sprite sprite = ingredientIconDatabase.GetSprite(definition.ingredientType);
+
+        artworkImage.sprite = sprite;
+        artworkImage.enabled = sprite != null;
 
         amountText.text = $"x{definition.amount}";
 
