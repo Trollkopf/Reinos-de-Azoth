@@ -30,6 +30,18 @@ public class SpellResolver : MonoBehaviour
     [SerializeField]
     private PlayerManager playerManager;
 
+    [SerializeField]
+    private MarketView marketView;
+
+    [SerializeField]
+    private MarketPanelController marketPanelController;
+
+    [SerializeField]
+    private SpellBookView spellBookView;
+
+    [SerializeField]
+    private BotController botController;
+
     public void Resolve(
         SpellInstance spellInstance,
         CreatureView targetCreature,
@@ -299,7 +311,11 @@ public class SpellResolver : MonoBehaviour
             selectedCreatureView,
             creatureSelectionManager,
             creaturePanel,
-            ingredientDeck
+            ingredientDeck,
+            marketView,
+            marketPanelController,
+            spellBookView,
+            botController
         );
     }
 

@@ -1,3 +1,4 @@
+using System;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -56,6 +57,12 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     private SpellInstance spellInstance;
 
     private SpellResolver spellResolver;
+
+    private SpellDetailsPanel spellDetailsPanel;
+
+    private bool masteryRewardMode = false;
+
+    private Action<SpellInstance> masteryRewardCallback;
 
     public void Setup(SpellInstance instance)
     {
@@ -184,6 +191,13 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (masteryRewardMode)
+        {
+            masteryRewardCallback?.Invoke(spellInstance);
+
+            return;
+        }
+
         TryCastSpell();
     }
 
@@ -271,6 +285,15 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         PlayerState targetPlayer
     )
     {
+        // Explosión Ácida es especial:
+        // sin jugador seleccionado afecta a todas las criaturas;
+        // con jugador seleccionado entra en modo PvP
+        // y afecta a todos los rivales.
+        if (definition.effectType == SpellEffectType.AcidExplosion)
+        {
+            return true;
+        }
+
         bool canTargetCreature = CanTargetCreature(definition.effectType);
 
         bool canTargetPlayer = CanTargetPlayer(definition.effectType);
@@ -304,7 +327,8 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
         return effectType == SpellEffectType.Damage
             || effectType == SpellEffectType.Drain
             || effectType == SpellEffectType.WindWhip
-            || effectType == SpellEffectType.Roots;
+            || effectType == SpellEffectType.Roots
+            || effectType == SpellEffectType.AcidExplosion;
     }
 
     private bool CanTargetPlayer(SpellEffectType effectType)
@@ -369,5 +393,26 @@ public class SpellPageView : MonoBehaviour, IPointerClickHandler
     public void SetPlayerTargetSelectionManager(PlayerTargetSelectionManager manager)
     {
         playerTargetSelectionManager = manager;
+    }
+
+    public void ShowSpellDetails()
+    {
+        if (spellInstance == null || spellInstance.definition == null || spellDetailsPanel == null)
+        {
+            return;
+        }
+
+        spellDetailsPanel.Show(spellInstance.definition);
+    }
+
+    public void SetSpellDetailsPanel(SpellDetailsPanel panel)
+    {
+        spellDetailsPanel = panel;
+    }
+
+    public void SetMasteryRewardMode(bool active, Action<SpellInstance> callback)
+    {
+        masteryRewardMode = active;
+        masteryRewardCallback = callback;
     }
 }

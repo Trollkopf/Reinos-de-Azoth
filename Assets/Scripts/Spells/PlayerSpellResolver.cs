@@ -144,7 +144,7 @@ internal sealed class PlayerSpellResolver
 
         if (damageToHealth > 0)
         {
-            targetPlayer.TakeDamage(damageToHealth);
+            targetPlayer.TakeDamage(damageToHealth, caster);
         }
 
         TryReflectDamage(targetPlayer, caster);
@@ -244,7 +244,7 @@ internal sealed class PlayerSpellResolver
 
         if (damageToHealth > 0)
         {
-            targetPlayer.TakeDamage(damageToHealth);
+            targetPlayer.TakeDamage(damageToHealth, caster);
         }
 
         TryReflectDamage(targetPlayer, caster);
@@ -283,7 +283,7 @@ internal sealed class PlayerSpellResolver
 
         if (damageToHealth > 0)
         {
-            targetPlayer.TakeDamage(damageToHealth);
+            targetPlayer.TakeDamage(damageToHealth, caster);
         }
 
         TryReflectDamage(targetPlayer, caster);
@@ -333,7 +333,7 @@ internal sealed class PlayerSpellResolver
 
         if (damageToHealth > 0)
         {
-            targetPlayer.TakeDamage(damageToHealth);
+            targetPlayer.TakeDamage(damageToHealth, caster);
         }
 
         TryReflectDamage(targetPlayer, caster);
@@ -378,7 +378,7 @@ internal sealed class PlayerSpellResolver
             Random.Range(0, availableIngredients.Count)
         ];
 
-        targetPlayer.inventory.Remove(discardedIngredient, 1);
+        targetPlayer.DiscardIngredient(discardedIngredient);
 
         Debug.Log(
             $"{targetPlayer.gameObject.name} descarta "
@@ -406,7 +406,7 @@ internal sealed class PlayerSpellResolver
             return;
         }
 
-        caster.TakeDamage(1);
+        caster.TakeDamage(1, targetPlayer);
 
         Debug.Log(
             $"{targetPlayer.gameObject.name} refleja 1 de daño " + $"a {caster.gameObject.name}."
@@ -452,7 +452,7 @@ internal sealed class PlayerSpellResolver
 
         if (damageToHealth > 0)
         {
-            targetPlayer.TakeDamage(damageToHealth);
+            targetPlayer.TakeDamage(damageToHealth, caster);
         }
 
         // Nv.3 aplica corrosión DESPUÉS

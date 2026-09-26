@@ -250,4 +250,45 @@ public class CreaturePanel : MonoBehaviour
 
         ReplaceCreature(creatureView);
     }
+
+    public void ResolveStartOfRoundEffects()
+    {
+        for (int i = 0; i < activeCreatures.Count; i++)
+        {
+            CreatureInstance creature = activeCreatures[i];
+
+            CreatureView creatureView = creatureViews[i];
+
+            if (creature == null || creature.IsDead || creature.definition == null)
+            {
+                continue;
+            }
+
+            if (creature.definition.ability != CreatureAbility.Regeneration)
+            {
+                continue;
+            }
+
+            int previousHP = creature.currentHP;
+
+            creature.currentHP = Mathf.Min(creature.definition.maxHP, creature.currentHP + 1);
+
+            int healed = creature.currentHP - previousHP;
+
+            if (healed > 0)
+            {
+                Debug.Log(
+                    $"{creature.definition.creatureName} "
+                        + $"regenera {healed} PV. "
+                        + $"PV actuales: {creature.currentHP}/"
+                        + $"{creature.definition.maxHP}."
+                );
+
+                if (creatureView != null)
+                {
+                    creatureView.Refresh();
+                }
+            }
+        }
+    }
 }

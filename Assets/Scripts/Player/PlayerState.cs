@@ -1,6 +1,6 @@
 using System;
-using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class PlayerState : MonoBehaviour
 {
@@ -22,6 +22,9 @@ public class PlayerState : MonoBehaviour
     public PlayerStatusEffects statusEffects = new PlayerStatusEffects();
 
     public event Action OnStatsChanged;
+    public event Action<PlayerState, PlayerState> OnPlayerDied;
+    public event Action<PlayerState> OnCoronationThresholdReached;
+    public bool IsAlive => currentHP > 0;
 
     private int spellsCastThisTurn = 0;
 
@@ -34,6 +37,11 @@ public class PlayerState : MonoBehaviour
         statusEffects.BeginTurn();
 
         ResolveBurns();
+
+        if (currentHP > 0)
+        {
+            ResolvePoison();
+        }
 
         if (statusEffects.spellLimitThisTurn > 0)
         {
@@ -56,24 +64,40 @@ public class PlayerState : MonoBehaviour
             return;
         }
 
-        int burnDamage = statusEffects.burns.Count;
-
         Debug.Log(
-            $"{gameObject.name} sufre "
-                + $"{burnDamage} de daño por "
+            $"{gameObject.name} sufre daño por "
                 + $"{statusEffects.burns.Count} acumulación(es) de Quemadura."
         );
 
-        TakeDamageWithShield(burnDamage);
+        List<BurnStack> expiredBurns = new List<BurnStack>();
 
-        for (int i = statusEffects.burns.Count - 1; i >= 0; i--)
+        foreach (BurnStack burn in statusEffects.burns)
         {
-            statusEffects.burns[i].turnsRemaining--;
-
-            if (statusEffects.burns[i].turnsRemaining <= 0)
+            if (currentHP <= 0)
             {
-                statusEffects.burns.RemoveAt(i);
+                break;
             }
+
+            if (burn == null)
+            {
+                continue;
+            }
+
+            PlayerState source = burn.source;
+
+            TakeDamageWithShield(1, source);
+
+            burn.turnsRemaining--;
+
+            if (burn.turnsRemaining <= 0)
+            {
+                expiredBurns.Add(burn);
+            }
+        }
+
+        foreach (BurnStack expiredBurn in expiredBurns)
+        {
+            statusEffects.burns.Remove(expiredBurn);
         }
 
         Debug.Log(
@@ -82,10 +106,12 @@ public class PlayerState : MonoBehaviour
         );
     }
 
-    public void TakeDamageWithShield(int amount)
+    public void TakeDamageWithShield(int amount, PlayerState source = null)
     {
-        if (amount <= 0)
+        if (amount <= 0 || currentHP <= 0)
+        {
             return;
+        }
 
         int remainingDamage = amount;
 
@@ -102,7 +128,7 @@ public class PlayerState : MonoBehaviour
 
         if (remainingDamage > 0)
         {
-            TakeDamage(remainingDamage);
+            TakeDamage(remainingDamage, source);
         }
     }
 
@@ -139,14 +165,23 @@ public class PlayerState : MonoBehaviour
         return Mathf.Max(0, limit - spellsCastThisTurn);
     }
 
-    public void TakeDamage(int amount)
+    public void TakeDamage(int amount, PlayerState source = null)
     {
-        if (amount <= 0)
+        if (amount <= 0 || currentHP <= 0)
+        {
             return;
+        }
 
         currentHP = Mathf.Max(0, currentHP - amount);
 
         NotifyStatsChanged();
+
+        if (currentHP <= 0)
+        {
+            Debug.Log($"{gameObject.name} ha sido eliminado.");
+
+            OnPlayerDied?.Invoke(this, source);
+        }
     }
 
     public void Heal(int amount)
@@ -200,9 +235,25 @@ public class PlayerState : MonoBehaviour
 
     public void AddArcanePower(int amount)
     {
+        if (amount <= 0)
+            return;
+
+        int previousArcanePower = arcanePower;
+
         arcanePower += amount;
 
         NotifyStatsChanged();
+
+        if (previousArcanePower < 10 && arcanePower >= 10)
+        {
+            Debug.Log(
+                $"{gameObject.name} ha alcanzado "
+                    + $"{arcanePower} de Poder Arcano "
+                    + "y reclama la Coronación."
+            );
+
+            OnCoronationThresholdReached?.Invoke(this);
+        }
     }
 
     public void NotifyStatsChanged()
@@ -279,5 +330,19 @@ public class PlayerState : MonoBehaviour
         }
 
         return true;
+    }
+
+    private void ResolvePoison()
+    {
+        if (statusEffects == null || !statusEffects.poisoned)
+        {
+            return;
+        }
+
+        Debug.Log($"{gameObject.name} sufre 1 de daño por Veneno.");
+
+        statusEffects.poisoned = false;
+
+        TakeDamageWithShield(1);
     }
 }

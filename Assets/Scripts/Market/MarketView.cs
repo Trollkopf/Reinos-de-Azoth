@@ -22,9 +22,15 @@ public class MarketView : MonoBehaviour
     [SerializeField]
     private PlayerStatusView playerStatusView;
 
+    [SerializeField]
+    private MarketPanelController marketPanelController;
+
     private readonly List<MarketCardDefinition> visibleCards = new List<MarketCardDefinition>();
 
     private readonly List<MarketCardView> cardViews = new List<MarketCardView>();
+
+    private bool freeRewardActive = false;
+    private PlayerState freeRewardPlayer = null;
 
     private const int VisibleSlots = 5;
 
@@ -82,34 +88,62 @@ public class MarketView : MonoBehaviour
         if (card == null)
             return;
 
-        if (buyer.coins < card.price)
+        bool isFreeReward = freeRewardActive && freeRewardPlayer == buyer;
+
+        if (!isFreeReward)
         {
-            Debug.Log($"No tienes monedas suficientes. Necesitas {card.price}.");
+            if (buyer.coins < card.price)
+            {
+                Debug.Log($"No tienes monedas suficientes. " + $"Necesitas {card.price}.");
 
-            return;
+                return;
+            }
+
+            buyer.SpendCoins(card.price);
         }
-
-        buyer.coins -= card.price;
 
         buyer.inventory.Add(card.ingredientType, card.amount);
 
-        Debug.Log(
-            $"Comprado {card.amount} x {card.ingredientType} " + $"por {card.price} monedas."
-        );
+        if (isFreeReward)
+        {
+            Debug.Log(
+                $"{buyer.gameObject.name} obtiene gratis "
+                    + $"{card.amount} x {card.ingredientType} "
+                    + "como recompensa del Dragón de Azufre."
+            );
+
+            freeRewardActive = false;
+            freeRewardPlayer = null;
+
+            if (marketPanelController != null && buyer == player)
+            {
+                marketPanelController.CloseMarket();
+            }
+        }
+        else
+        {
+            Debug.Log(
+                $"Comprado {card.amount} x "
+                    + $"{card.ingredientType} "
+                    + $"por {card.price} monedas."
+            );
+        }
 
         marketDeck.Discard(card);
 
         ReplaceSlot(slotIndex);
 
-        // Estas vistas pertenecen al jugador humano.
-        // No hace falta refrescarlas cuando compra el bot.
         if (buyer == player)
         {
             if (inventoryView != null)
+            {
                 inventoryView.Refresh();
+            }
 
             if (playerStatusView != null)
+            {
                 playerStatusView.Refresh();
+            }
         }
     }
 
@@ -147,5 +181,27 @@ public class MarketView : MonoBehaviour
         }
 
         return visibleCards[index];
+    }
+
+    public void BeginFreeReward(PlayerState rewardPlayer)
+    {
+        if (rewardPlayer == null)
+        {
+            return;
+        }
+
+        EnsureInitialized();
+
+        freeRewardActive = true;
+        freeRewardPlayer = rewardPlayer;
+
+        Debug.Log(
+            $"{rewardPlayer.gameObject.name} puede elegir " + "1 carta visible del Mercado gratis."
+        );
+    }
+
+    public bool HasFreeRewardFor(PlayerState buyer)
+    {
+        return freeRewardActive && freeRewardPlayer == buyer;
     }
 }

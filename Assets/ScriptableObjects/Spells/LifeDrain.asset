@@ -20,9 +20,9 @@ MonoBehaviour:
     amount: 1
   - type: 0
     amount: 1
-  level1Description: "Inflige 2 de da\xF1o.\r\nRecuperas 1 PV."
-  level2Description: "Inflige 2 de da\xF1o.\r\nRecuperas 2 PV."
-  level3Description: "Inflige 3 de da\xF1o.\r\nRecuperas 2 PV."
+  level1Description: "Inflige 2 de da\xF1o.\r\nRecuperas 1 Punto de Vida."
+  level2Description: "Inflige 2 de da\xF1o.\r\nRecuperas 2 Puntos de vida."
+  level3Description: "Inflige 3 de da\xF1o.\r\nRecuperas 2 Puntos de Vida."
   effectType: 3
   level1Value: 2
   level2Value: 2

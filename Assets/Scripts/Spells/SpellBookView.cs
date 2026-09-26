@@ -29,6 +29,9 @@ public class SpellBookView : MonoBehaviour
     [SerializeField]
     private TMP_Text pageIndicator;
 
+    [SerializeField]
+    private SpellDetailsPanel spellDetailsPanel;
+
     [Header("References")]
     [SerializeField]
     private IngredientInventoryView inventoryView;
@@ -44,6 +47,10 @@ public class SpellBookView : MonoBehaviour
 
     private List<SpellInstance> spells;
     private int currentSpreadIndex = 0;
+
+    private bool masteryRewardMode = false;
+
+    private PlayerState masteryRewardPlayer = null;
 
     private void Start()
     {
@@ -104,6 +111,10 @@ public class SpellBookView : MonoBehaviour
         page.SetPlayerTargetSelectionManager(playerTargetSelectionManager);
 
         page.Setup(spells[spellIndex]);
+
+        page.SetMasteryRewardMode(masteryRewardMode, HandleMasteryRewardSelection);
+
+        page.SetSpellDetailsPanel(spellDetailsPanel);
     }
 
     public void NextPage()
@@ -134,5 +145,65 @@ public class SpellBookView : MonoBehaviour
         {
             player.inventory.OnChanged -= RefreshBook;
         }
+    }
+
+    public void BeginMasteryReward(PlayerState rewardPlayer)
+    {
+        if (rewardPlayer == null || rewardPlayer != player)
+        {
+            return;
+        }
+
+        masteryRewardMode = true;
+        masteryRewardPlayer = rewardPlayer;
+
+        Debug.Log(
+            $"{rewardPlayer.gameObject.name} puede elegir "
+                + "un hechizo para recibir +1 de Maestría."
+        );
+
+        RefreshBook();
+    }
+
+    private void HandleMasteryRewardSelection(SpellInstance selectedSpell)
+    {
+        if (
+            !masteryRewardMode
+            || masteryRewardPlayer == null
+            || selectedSpell == null
+            || selectedSpell.definition == null
+        )
+        {
+            return;
+        }
+
+        int previousLevel = selectedSpell.level;
+
+        int previousMastery = selectedSpell.mastery;
+
+        selectedSpell.AddMastery();
+
+        Debug.Log(
+            $"{selectedSpell.definition.spellName} recibe "
+                + $"+1 de Maestría por derrotar al Señor Espectral. "
+                + $"{previousMastery} → {selectedSpell.mastery}."
+        );
+
+        if (selectedSpell.level > previousLevel)
+        {
+            Debug.Log(
+                $"¡{selectedSpell.definition.spellName} " + $"sube a Nivel {selectedSpell.level}!"
+            );
+        }
+
+        masteryRewardMode = false;
+        masteryRewardPlayer = null;
+
+        RefreshBook();
+    }
+
+    public bool IsPlayer(PlayerState target)
+    {
+        return player == target;
     }
 }

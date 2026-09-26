@@ -11,6 +11,8 @@ public class PlayerStatusEffects
 
     public bool corroded = false;
 
+    public bool poisoned = false;
+
     public bool reflectNextDamage = false;
 
     public void BeginTurn()
@@ -55,6 +57,7 @@ public class PlayerStatusEffects
         spellLimitThisTurn = -1;
 
         corroded = false;
+        poisoned = false;
     }
 
     public void ClearEndOfTurnEffects()

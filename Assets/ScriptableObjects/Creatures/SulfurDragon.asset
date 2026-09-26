@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 7f0267dd6d642f64fa2c6a7f920efa24, type: 3}
-  m_Name: MudGremlin
+  m_Name: SulfurDragon
   m_EditorClassIdentifier: 
-  id: mud_gremlin
-  creatureName: Gremlin de Barro
+  id: sulfur_dragon
+  creatureName: "Drag\xF3n de Azufre"
   artwork: {fileID: 0}
-  rank: 0
-  maxHP: 4
-  attack: 2
-  coinReward: 2
-  arcanePowerReward: 1
-  ability: 4
-  abilityDescription: Al morir, el atacante descarta 1 ingrediente (No aplica si
-    muere por quemadura de bola de fuego Nv. 3)
+  rank: 2
+  maxHP: 12
+  attack: 4
+  coinReward: 10
+  arcanePowerReward: 3
+  ability: 7
+  abilityDescription: "Recibe 1 punto menos de da\xF1o de Bola de Fuego.\nAl derrotarlo,
+    obtienes gratis 1 carta visible del Mercado."

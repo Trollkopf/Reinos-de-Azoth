@@ -12,13 +12,21 @@ internal sealed class CreatureSpellResolver
     private readonly CreatureSelectionManager creatureSelectionManager;
     private readonly CreaturePanel creaturePanel;
     private readonly IngredientDeck ingredientDeck;
+    private readonly MarketView marketView;
+    private readonly MarketPanelController marketPanelController;
+    private readonly SpellBookView spellBookView;
+    private readonly BotController botController;
 
     internal CreatureSpellResolver(
         PlayerStatusView playerStatusView,
         SelectedCreatureView selectedCreatureView,
         CreatureSelectionManager creatureSelectionManager,
         CreaturePanel creaturePanel,
-        IngredientDeck ingredientDeck
+        IngredientDeck ingredientDeck,
+        MarketView marketView,
+        MarketPanelController marketPanelController,
+        SpellBookView spellBookView,
+        BotController botController
     )
     {
         this.playerStatusView = playerStatusView;
@@ -26,6 +34,10 @@ internal sealed class CreatureSpellResolver
         this.creatureSelectionManager = creatureSelectionManager;
         this.creaturePanel = creaturePanel;
         this.ingredientDeck = ingredientDeck;
+        this.marketView = marketView;
+        this.marketPanelController = marketPanelController;
+        this.spellBookView = spellBookView;
+        this.botController = botController;
     }
 
     internal void ResolveDamage(
@@ -48,9 +60,15 @@ internal sealed class CreatureSpellResolver
 
         int baseDamage = spellInstance.definition.GetEffectValue(spellInstance.level);
 
-        int damage = SpellDamageCalculator.CalculateCreatureDamage(creature, baseDamage);
+        int damage = SpellDamageCalculator.CalculateCreatureDamage(
+            creature,
+            spellInstance.definition,
+            baseDamage
+        );
 
         creature.TakeDamage(damage);
+
+        ResolveOnAttackedAbility(creature, caster);
 
         // Bola de Fuego Nv.3:
         // añade una acumulación independiente
@@ -104,7 +122,9 @@ internal sealed class CreatureSpellResolver
 
         int remainingDamage = damage;
 
-        if (caster.shield > 0)
+        bool ignoresShield = creature.definition.ability == CreatureAbility.IgnoreShield;
+
+        if (!ignoresShield && caster.shield > 0)
         {
             int absorbed = Mathf.Min(caster.shield, remainingDamage);
 
@@ -114,10 +134,27 @@ internal sealed class CreatureSpellResolver
 
             Debug.Log($"El Escudo Arcano absorbe {absorbed} de daño.");
         }
+        else if (ignoresShield)
+        {
+            Debug.Log($"{creature.definition.creatureName} " + "ignora el Escudo Arcano.");
+        }
 
         if (remainingDamage > 0)
         {
             caster.TakeDamage(remainingDamage);
+
+            if (
+                creature.definition.ability == CreatureAbility.Poison
+                && caster.IsAlive
+                && caster.statusEffects != null
+            )
+            {
+                caster.statusEffects.poisoned = true;
+
+                Debug.Log(
+                    $"{creature.definition.creatureName} " + $"envenena a {caster.gameObject.name}."
+                );
+            }
         }
 
         Debug.Log(
@@ -145,6 +182,43 @@ internal sealed class CreatureSpellResolver
         caster.AddCoins(definition.coinReward);
 
         caster.AddArcanePower(definition.arcanePowerReward);
+
+        ResolveMudGremlinDeathEffect(definition, caster);
+
+        if (definition.ability == CreatureAbility.SulfurDragonFireResistance && marketView != null)
+        {
+            marketView.BeginFreeReward(caster);
+
+            if (marketPanelController != null && marketView.GetPlayer() == caster)
+            {
+                marketPanelController.OpenMarket();
+            }
+        }
+
+        if (definition.ability == CreatureAbility.IgnoreShield)
+        {
+            if (spellBookView != null && spellBookView.IsPlayer(caster))
+            {
+                spellBookView.BeginMasteryReward(caster);
+            }
+            else if (botController != null && botController.IsControlledPlayer(caster))
+            {
+                botController.GrantSpectralLordMasteryReward();
+            }
+        }
+
+        if (
+            definition.ability == CreatureAbility.SwampWitchDiscardOnAttack
+            && ingredientDeck != null
+        )
+        {
+            ingredientDeck.DrawToPlayer(caster, 1);
+
+            Debug.Log(
+                $"{caster.gameObject.name} roba 1 ingrediente "
+                    + $"por derrotar a {definition.creatureName}."
+            );
+        }
 
         Debug.Log(
             $"Recompensa: +{definition.coinReward} monedas, "
@@ -187,11 +261,17 @@ internal sealed class CreatureSpellResolver
 
         int baseDamage = spellInstance.definition.GetEffectValue(spellInstance.level);
 
-        int damage = SpellDamageCalculator.CalculateCreatureDamage(creature, baseDamage);
+        int damage = SpellDamageCalculator.CalculateCreatureDamage(
+            creature,
+            spellInstance.definition,
+            baseDamage
+        );
 
         int healing = spellInstance.definition.GetSecondaryEffectValue(spellInstance.level);
 
         creature.TakeDamage(damage);
+
+        ResolveOnAttackedAbility(creature, caster);
 
         caster.Heal(healing);
 
@@ -236,9 +316,15 @@ internal sealed class CreatureSpellResolver
 
         int baseDamage = spellInstance.definition.GetEffectValue(spellInstance.level);
 
-        int damage = SpellDamageCalculator.CalculateCreatureDamage(creature, baseDamage);
+        int damage = SpellDamageCalculator.CalculateCreatureDamage(
+            creature,
+            spellInstance.definition,
+            baseDamage
+        );
 
         creature.TakeDamage(damage);
+
+        ResolveOnAttackedAbility(creature, caster);
 
         RefreshCreatureViews(targetCreature);
 
@@ -279,11 +365,24 @@ internal sealed class CreatureSpellResolver
         if (creature == null || creature.IsDead)
             return;
 
+        if (creature.definition.ability == CreatureAbility.Flying)
+        {
+            Debug.Log(
+                $"{creature.definition.creatureName} vuela " + "y es inmune a Raíces de Tierra."
+            );
+
+            return;
+        }
+
         int baseDamage = spellInstance.definition.GetEffectValue(spellInstance.level);
 
         int damage =
             baseDamage > 0
-                ? SpellDamageCalculator.CalculateCreatureDamage(creature, baseDamage)
+                ? SpellDamageCalculator.CalculateCreatureDamage(
+                    creature,
+                    spellInstance.definition,
+                    baseDamage
+                )
                 : 0;
 
         if (damage > 0)
@@ -334,6 +433,12 @@ internal sealed class CreatureSpellResolver
 
         List<CreatureView> creatures = creaturePanel.GetActiveCreatureViews();
 
+        Debug.Log(
+            $"EXPLOSIÓN ÁCIDA DEBUG → "
+                + $"CreaturePanel: {creaturePanel.gameObject.name} | "
+                + $"Criaturas encontradas: {creatures.Count}"
+        );
+
         List<CreatureView> defeatedCreatures = new List<CreatureView>();
 
         foreach (CreatureView creatureView in creatures)
@@ -349,6 +454,8 @@ internal sealed class CreatureSpellResolver
             }
 
             creature.TakeDamage(damage);
+
+            ResolveOnAttackedAbility(creature, caster);
 
             if (spellInstance.level >= 3 && !creature.IsDead)
             {
@@ -396,5 +503,95 @@ internal sealed class CreatureSpellResolver
         {
             selectedCreatureView.Refresh();
         }
+    }
+
+    private void ResolveOnAttackedAbility(CreatureInstance creature, PlayerState caster)
+    {
+        if (creature == null || creature.definition == null || caster == null)
+        {
+            return;
+        }
+
+        if (creature.definition.ability != CreatureAbility.SwampWitchDiscardOnAttack)
+        {
+            return;
+        }
+
+        List<IngredientType> availableIngredients = new List<IngredientType>();
+
+        foreach (IngredientType type in System.Enum.GetValues(typeof(IngredientType)))
+        {
+            if (caster.inventory.GetAmount(type) > 0)
+            {
+                availableIngredients.Add(type);
+            }
+        }
+
+        if (availableIngredients.Count == 0)
+        {
+            Debug.Log(
+                $"{caster.gameObject.name} no tiene ingredientes "
+                    + "adicionales que descartar por atacar "
+                    + $"{creature.definition.creatureName}."
+            );
+
+            return;
+        }
+
+        IngredientType discardedIngredient = availableIngredients[
+            Random.Range(0, availableIngredients.Count)
+        ];
+
+        caster.DiscardIngredient(discardedIngredient);
+
+        Debug.Log(
+            $"{creature.definition.creatureName} obliga a "
+                + $"{caster.gameObject.name} a descartar "
+                + $"{discardedIngredient}."
+        );
+    }
+
+    private void ResolveMudGremlinDeathEffect(CreatureDefinition definition, PlayerState killer)
+    {
+        if (
+            definition == null
+            || killer == null
+            || definition.ability != CreatureAbility.MudGremlinDeathDiscard
+        )
+        {
+            return;
+        }
+
+        List<IngredientType> availableIngredients = new List<IngredientType>();
+
+        foreach (IngredientType ingredientType in System.Enum.GetValues(typeof(IngredientType)))
+        {
+            if (killer.inventory.GetAmount(ingredientType) > 0)
+            {
+                availableIngredients.Add(ingredientType);
+            }
+        }
+
+        if (availableIngredients.Count == 0)
+        {
+            Debug.Log(
+                $"{killer.gameObject.name} no tiene ingredientes "
+                    + "que descartar por la muerte del Gremlin de Barro."
+            );
+
+            return;
+        }
+
+        IngredientType discardedIngredient = availableIngredients[
+            Random.Range(0, availableIngredients.Count)
+        ];
+
+        killer.DiscardIngredient(discardedIngredient);
+
+        Debug.Log(
+            $"El Gremlin de Barro cae y "
+                + $"{killer.gameObject.name} descarta "
+                + $"{discardedIngredient}."
+        );
     }
 }

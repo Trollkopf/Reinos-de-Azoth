@@ -6,8 +6,12 @@ namespace ReinosDeAzoth.Tests.EditMode
     public class PlayerStateTests
     {
         private PlayerState player;
-        [SetUp] public void SetUp() => player = new GameObject("Player test").AddComponent<PlayerState>();
-        [TearDown] public void TearDown() => Object.DestroyImmediate(player.gameObject);
+
+        [SetUp]
+        public void SetUp() => player = new GameObject("Player test").AddComponent<PlayerState>();
+
+        [TearDown]
+        public void TearDown() => Object.DestroyImmediate(player.gameObject);
 
         [TestCase(1, 1)]
         [TestCase(6, 6)]
@@ -44,7 +48,8 @@ namespace ReinosDeAzoth.Tests.EditMode
         public void CanCastSpell_RespectsLimit(int limit, int casts, bool expected)
         {
             player.statusEffects.spellLimitThisTurn = limit;
-            for (int i = 0; i < casts; i++) player.RegisterSpellCast();
+            for (int i = 0; i < casts; i++)
+                player.RegisterSpellCast();
             Assert.That(player.CanCastSpell(), Is.EqualTo(expected));
         }
 
@@ -72,7 +77,8 @@ namespace ReinosDeAzoth.Tests.EditMode
         public void HealingLevelThree_ResolvesCleansingThroughPublicSpellResolver()
         {
             var definition = UnityEditor.AssetDatabase.LoadAssetAtPath<SpellDefinition>(
-                "Assets/ScriptableObjects/Spells/Healing.asset");
+                "Assets/ScriptableObjects/Spells/Healing.asset"
+            );
             Assert.That(definition, Is.Not.Null);
             player.statusEffects.AddBurn(player);
             player.statusEffects.corroded = true;
@@ -104,6 +110,92 @@ namespace ReinosDeAzoth.Tests.EditMode
             player.BeginTurn();
             Assert.That(player.currentHP, Is.EqualTo(12));
         }
+
+        [Test]
+        public void BurnLethalDamage_ReportsBurnSourceAsKiller()
+        {
+            GameObject victimObject = new GameObject("Victim");
+
+            GameObject killerObject = new GameObject("Killer");
+
+            PlayerState victim = victimObject.AddComponent<PlayerState>();
+
+            PlayerState killer = killerObject.AddComponent<PlayerState>();
+
+            try
+            {
+                victim.currentHP = 1;
+
+                victim.statusEffects.AddBurn(killer);
+
+                PlayerState reportedDeadPlayer = null;
+                PlayerState reportedKiller = null;
+
+                victim.OnPlayerDied += (deadPlayer, source) =>
+                {
+                    reportedDeadPlayer = deadPlayer;
+
+                    reportedKiller = source;
+                };
+
+                victim.BeginTurn();
+
+                Assert.That(victim.currentHP, Is.EqualTo(0));
+
+                Assert.That(victim.IsAlive, Is.False);
+
+                Assert.That(reportedDeadPlayer, Is.SameAs(victim));
+
+                Assert.That(reportedKiller, Is.SameAs(killer));
+            }
+            finally
+            {
+                Object.DestroyImmediate(victimObject);
+
+                Object.DestroyImmediate(killerObject);
+            }
+        }
+
+        [Test]
+        public void ArcanePower_ReachingTen_TriggersCoronationOnlyOnce()
+        {
+            GameObject playerObject = new GameObject("Player");
+
+            PlayerState player = playerObject.AddComponent<PlayerState>();
+
+            try
+            {
+                player.arcanePower = 9;
+
+                int coronationCount = 0;
+                PlayerState reportedPlayer = null;
+
+                player.OnCoronationThresholdReached += coronationPlayer =>
+                {
+                    coronationCount++;
+                    reportedPlayer = coronationPlayer;
+                };
+
+                player.AddArcanePower(2);
+
+                Assert.That(player.arcanePower, Is.EqualTo(11));
+
+                Assert.That(coronationCount, Is.EqualTo(1));
+
+                Assert.That(reportedPlayer, Is.SameAs(player));
+
+                // Ya está por encima de 10:
+                // ganar más AP no debe reclamar otra Coronación.
+                player.AddArcanePower(3);
+
+                Assert.That(player.arcanePower, Is.EqualTo(14));
+
+                Assert.That(coronationCount, Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(playerObject);
+            }
+        }
     }
 }
-
