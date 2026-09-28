@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: swamp_witch
   creatureName: Bruja del Pantano
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 0279549f8f291c541b579837b22ea7d0, type: 3}
   rank: 1
   maxHP: 6
   attack: 2

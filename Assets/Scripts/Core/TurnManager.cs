@@ -1,212 +1,442 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class TurnManager : MonoBehaviour
 {
-    [Header("References")]
+    [Header("Game")]
     [SerializeField]
-    private PlayerState player;
-
-    [SerializeField]
-    private PlayerSpellBook spellBook;
-
-    [SerializeField]
-    private SpellBookView spellBookView;
+    private GameManager gameManager;
 
     [SerializeField]
     private IngredientDeck ingredientDeck;
 
     [SerializeField]
-    private IngredientInventoryView inventoryView;
-
-    [SerializeField]
     private CreaturePanel creaturePanel;
 
     [SerializeField]
-    private PlayerState botPlayer;
+    private MarketView marketView;
+
+    [Header("Human UI")]
+    [SerializeField]
+    private SpellBookView spellBookView;
 
     [SerializeField]
-    private BotController botController;
+    private IngredientInventoryView inventoryView;
 
     [SerializeField]
-    private GameManager gameManager;
+    private PlayerStatusView playerStatusView;
 
-    private int turnNumber = 1;
+    [SerializeField]
+    private PlayerTargetSelectionManager playerTargetSelectionManager;
 
-    private bool isPlayerTurn = true;
+    [Header("Bots")]
+    [SerializeField]
+    private List<BotController> botControllers = new List<BotController>();
+
+    private int currentPlayerIndex = 0;
+
+    private int roundNumber = 1;
+
+    private bool turnStarted = false;
+
+    public PlayerState CurrentPlayer
+    {
+        get
+        {
+            if (
+                gameManager == null
+                || gameManager.ActivePlayers == null
+                || gameManager.ActivePlayers.Count == 0
+            )
+            {
+                return null;
+            }
+
+            if (currentPlayerIndex < 0 || currentPlayerIndex >= gameManager.ActivePlayers.Count)
+            {
+                return null;
+            }
+
+            return gameManager.ActivePlayers[currentPlayerIndex];
+        }
+    }
+
+    private IEnumerator Start()
+    {
+        /*
+         * Esperamos un frame porque GameManager.Start()
+         * tiene que configurar primero los jugadores
+         * seleccionados desde GameSetup.
+         */
+        yield return null;
+
+        if (gameManager == null || gameManager.ActivePlayers.Count < 2)
+        {
+            Debug.LogError("TurnManager: no hay suficientes " + "jugadores activos.");
+
+            yield break;
+        }
+
+        currentPlayerIndex = 0;
+        roundNumber = 1;
+
+        /*
+         * El primer jugador ya recibió sus
+         * 3 ingredientes iniciales desde GameManager,
+         * así que NO roba uno adicional.
+         */
+        StartCurrentTurn(true);
+    }
 
     public void EndTurn()
     {
-        if (gameManager != null && gameManager.IsGameOver)
+        if (gameManager == null || gameManager.IsGameOver)
         {
             return;
         }
 
-        if (!isPlayerTurn)
+        PlayerState currentPlayer = CurrentPlayer;
+
+        if (currentPlayer == null || !currentPlayer.IsAlive)
         {
             return;
         }
 
-        if (player.inventory.GetTotalCount() > PlayerState.MaxHandSize)
+        /*
+         * El botón de terminar turno solamente
+         * puede controlar jugadores humanos.
+         */
+        if (!gameManager.IsHumanPlayer(currentPlayer))
+        {
+            return;
+        }
+
+        if (currentPlayer.inventory.GetTotalCount() > PlayerState.MaxHandSize)
         {
             Debug.Log(
                 $"Debes descartar ingredientes hasta tener "
-                    + $"{PlayerState.MaxHandSize} antes de terminar el turno."
+                    + $"{PlayerState.MaxHandSize} "
+                    + "antes de terminar el turno."
             );
 
             return;
         }
 
-        Debug.Log("Termina el turno del jugador.");
-
-        player.EndTurn();
-
-        if (creaturePanel != null)
-        {
-            creaturePanel.ClearEndOfTurnEffects();
-        }
-
-        if (gameManager != null && gameManager.IsGameOver)
-        {
-            return;
-        }
-
-        // Si hay Coronación y el jugador humano NO es
-        // quien se coronó, este era su último turno
-        // para intentar detener al coronado.
-        if (
-            gameManager != null
-            && gameManager.IsCoronationActive
-            && gameManager.CoronationPlayer != player
-        )
-        {
-            Debug.Log("El jugador termina su último turno " + "de la ronda de Coronación.");
-
-            gameManager.ResolveCoronation();
-
-            return;
-        }
-
-        isPlayerTurn = false;
-
-        StartBotTurn();
+        FinishCurrentTurn();
     }
 
-    private void StartTurn()
+    private void StartCurrentTurn(bool initialTurn = false)
     {
-        if (gameManager != null && gameManager.IsGameOver)
+        if (gameManager == null || gameManager.IsGameOver)
         {
             return;
         }
 
-        Debug.Log($"===== TURNO {turnNumber} DEL JUGADOR =====");
+        PlayerState currentPlayer = CurrentPlayer;
 
-        if (creaturePanel != null)
-        {
-            creaturePanel.ResolveStartOfRoundEffects();
-        }
-
-        player.BeginTurn();
-
-        if (gameManager != null && gameManager.IsGameOver)
+        if (currentPlayer == null)
         {
             return;
         }
 
-        ingredientDeck.DrawToPlayer(player, 1);
+        /*
+         * Por seguridad, si por algún motivo
+         * hemos llegado a un jugador muerto,
+         * saltamos al siguiente.
+         */
+        if (!currentPlayer.IsAlive)
+        {
+            AdvanceToNextPlayer();
+            return;
+        }
+
+        turnStarted = true;
+
+        Debug.Log(
+            $"===== RONDA {roundNumber} | "
+                + $"TURNO DE "
+                + $"{currentPlayer.gameObject.name} ====="
+        );
+
+        currentPlayer.BeginTurn();
+
+        /*
+         * BeginTurn puede matar al jugador por
+         * Quemadura, Veneno, etc.
+         */
+        if (gameManager.IsGameOver)
+        {
+            return;
+        }
+
+        if (!currentPlayer.IsAlive)
+        {
+            AdvanceToNextPlayer();
+            return;
+        }
+
+        /*
+         * En el primer turno de la partida
+         * mantenemos el comportamiento anterior:
+         * empieza con los 3 ingredientes iniciales
+         * y no roba un cuarto.
+         */
+        if (!initialTurn)
+        {
+            ingredientDeck.DrawToPlayer(currentPlayer, 1);
+        }
+
+        if (gameManager.IsHumanPlayer(currentPlayer))
+        {
+            StartHumanTurn(currentPlayer);
+        }
+        else if (gameManager.IsBotPlayer(currentPlayer))
+        {
+            StartBotTurn(currentPlayer);
+        }
+    }
+
+    private void StartHumanTurn(PlayerState currentPlayer)
+    {
+        Debug.Log($"{currentPlayer.gameObject.name} " + "es controlado por un humano.");
+
+        if (playerTargetSelectionManager != null)
+        {
+            playerTargetSelectionManager.SetCurrentPlayer(currentPlayer);
+        }
+
+        if (inventoryView != null)
+        {
+            inventoryView.SetPlayer(currentPlayer);
+        }
+
+        if (playerStatusView != null)
+        {
+            playerStatusView.SetPlayer(currentPlayer);
+        }
 
         if (spellBookView != null)
         {
-            spellBookView.RefreshBook();
+            spellBookView.SetPlayer(currentPlayer);
         }
 
-        DebugInventory();
+        if (marketView != null)
+        {
+            marketView.SetPlayer(currentPlayer);
+        }
+
+        Debug.Log($"La interfaz pertenece ahora a " + $"{currentPlayer.gameObject.name}.");
+
+        /*
+         * Aquí termina la inicialización.
+         * Ahora esperamos a que el humano juegue
+         * y pulse Finalizar turno.
+         */
     }
 
-    private void StartBotTurn()
+    private void StartBotTurn(PlayerState botPlayer)
     {
-        if (gameManager != null && gameManager.IsGameOver)
+        BotController controller = GetBotController(botPlayer);
+
+        if (controller == null)
         {
+            Debug.LogError(
+                $"No se encuentra BotController para " + $"{botPlayer.gameObject.name}."
+            );
+
+            /*
+             * Evitamos bloquear la partida
+             * si falta una referencia.
+             */
+            FinishCurrentTurn();
+
             return;
         }
 
-        Debug.Log("===== TURNO DEL BOT =====");
-
-        botPlayer.BeginTurn();
-
-        // El bot puede morir aquí por Quemadura.
-        if (gameManager != null && gameManager.IsGameOver)
-        {
-            return;
-        }
-
-        ingredientDeck.DrawToPlayer(botPlayer, 1);
-
-        botController.StartBotTurn();
-
-        // El bot puede matar al jugador durante sus acciones.
-        if (gameManager != null && gameManager.IsGameOver)
-        {
-            return;
-        }
-
-        EndBotTurn();
+        StartCoroutine(RunBotTurn(controller));
     }
 
-    private void EndBotTurn()
+    private IEnumerator RunBotTurn(BotController controller)
     {
-        if (gameManager != null && gameManager.IsGameOver)
+        /*
+         * Dejamos un frame entre jugadores.
+         * También evita encadenar recursivamente
+         * varios bots en el mismo call stack.
+         */
+        yield return null;
+
+        if (gameManager == null || gameManager.IsGameOver)
+        {
+            yield break;
+        }
+
+        controller.StartBotTurn();
+
+        if (gameManager.IsGameOver)
+        {
+            yield break;
+        }
+
+        controller.DiscardDownToHandLimit();
+
+        if (gameManager.IsGameOver)
+        {
+            yield break;
+        }
+
+        FinishCurrentTurn();
+    }
+
+    private void FinishCurrentTurn()
+    {
+        if (gameManager == null || gameManager.IsGameOver || !turnStarted)
         {
             return;
         }
 
-        botController.DiscardDownToHandLimit();
+        PlayerState currentPlayer = CurrentPlayer;
 
-        Debug.Log("Termina el turno del bot.");
+        if (currentPlayer == null)
+        {
+            return;
+        }
 
-        botPlayer.EndTurn();
+        turnStarted = false;
+
+        Debug.Log($"Termina el turno de " + $"{currentPlayer.gameObject.name}.");
+
+        currentPlayer.EndTurn();
 
         if (creaturePanel != null)
         {
             creaturePanel.ClearEndOfTurnEffects();
         }
 
-        if (gameManager != null && gameManager.IsGameOver)
+        if (gameManager.IsGameOver)
         {
             return;
         }
 
-        // Si hay Coronación y el bot NO es
-        // quien se coronó, este era su último turno
-        // para intentar detener al coronado.
+        /*
+         * El aspirante puede haber muerto
+         * durante la ronda de Coronación.
+         *
+         * GameManager.ResolveCoronation()
+         * cancelará la Coronación en ese caso.
+         */
         if (
-            gameManager != null
-            && gameManager.IsCoronationActive
-            && gameManager.CoronationPlayer != botPlayer
+            gameManager.IsCoronationActive
+            && (gameManager.CoronationPlayer == null || !gameManager.CoronationPlayer.IsAlive)
         )
         {
-            Debug.Log("El bot termina su último turno " + "de la ronda de Coronación.");
+            gameManager.ResolveCoronation();
 
+            if (gameManager.IsGameOver)
+            {
+                return;
+            }
+        }
+
+        AdvanceToNextPlayer();
+    }
+
+    private void AdvanceToNextPlayer()
+    {
+        if (gameManager == null || gameManager.IsGameOver)
+        {
+            return;
+        }
+
+        int playerCount = gameManager.ActivePlayers.Count;
+
+        if (playerCount == 0)
+        {
+            return;
+        }
+
+        int previousIndex = currentPlayerIndex;
+
+        int nextIndex = FindNextAlivePlayerIndex();
+
+        if (nextIndex < 0)
+        {
+            return;
+        }
+
+        bool wrappedRound = nextIndex <= previousIndex;
+
+        currentPlayerIndex = nextIndex;
+
+        PlayerState nextPlayer = CurrentPlayer;
+
+        /*
+         * Si hemos dado toda la vuelta y el
+         * siguiente jugador vivo vuelve a ser
+         * quien reclamó la Coronación,
+         * todos sus rivales ya tuvieron su
+         * oportunidad de responder.
+         */
+        if (gameManager.IsCoronationActive && nextPlayer == gameManager.CoronationPlayer)
+        {
             gameManager.ResolveCoronation();
 
             return;
         }
 
-        isPlayerTurn = true;
+        if (wrappedRound)
+        {
+            roundNumber++;
 
-        turnNumber++;
+            Debug.Log($"===== COMIENZA RONDA " + $"{roundNumber} =====");
 
-        StartTurn();
+            /*
+             * Regeneración del Gólem Óseo y
+             * futuros efectos de inicio de ronda.
+             */
+            if (creaturePanel != null)
+            {
+                creaturePanel.ResolveStartOfRoundEffects();
+            }
+        }
+
+        StartCurrentTurn();
     }
 
-    private void DebugInventory()
+    private int FindNextAlivePlayerIndex()
     {
-        Debug.Log(
-            $"Inventario → "
-                + $"Hierba: {player.inventory.GetAmount(IngredientType.RedHerb)} | "
-                + $"Agua: {player.inventory.GetAmount(IngredientType.PureWater)} | "
-                + $"Azufre: {player.inventory.GetAmount(IngredientType.SulfurMineral)} | "
-                + $"Cristal: {player.inventory.GetAmount(IngredientType.AirCrystal)} | "
-                + $"Hueso: {player.inventory.GetAmount(IngredientType.BoneDust)}"
-        );
+        int playerCount = gameManager.ActivePlayers.Count;
+
+        for (int offset = 1; offset <= playerCount; offset++)
+        {
+            int index = (currentPlayerIndex + offset) % playerCount;
+
+            PlayerState candidate = gameManager.ActivePlayers[index];
+
+            if (candidate != null && candidate.IsAlive)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private BotController GetBotController(PlayerState botPlayer)
+    {
+        foreach (BotController controller in botControllers)
+        {
+            if (controller == null)
+            {
+                continue;
+            }
+
+            if (controller.IsControlledPlayer(botPlayer))
+            {
+                return controller;
+            }
+        }
+
+        return null;
     }
 }

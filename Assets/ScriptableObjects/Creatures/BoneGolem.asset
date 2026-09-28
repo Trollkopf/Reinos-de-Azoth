@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: bone_golem
   creatureName: "G\xF3lem \xD3seo"
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: eb3fbea391134dd49bfa92c670daf91b, type: 3}
   rank: 1
   maxHP: 8
   attack: 2

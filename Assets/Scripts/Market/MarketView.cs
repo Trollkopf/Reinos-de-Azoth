@@ -159,6 +159,21 @@ public class MarketView : MonoBehaviour
         cardViews[slotIndex].Setup(newCard, this, slotIndex);
     }
 
+    public void SetPlayer(PlayerState newPlayer)
+    {
+        player = newPlayer;
+
+        if (inventoryView != null)
+        {
+            inventoryView.Refresh();
+        }
+
+        if (playerStatusView != null)
+        {
+            playerStatusView.Refresh();
+        }
+    }
+
     public PlayerState GetPlayer()
     {
         return player;

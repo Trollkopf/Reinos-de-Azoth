@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: spectral_lord
   creatureName: "Se\xF1or Espectral"
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: a1a16cda450e60449823696b17d1a699, type: 3}
   rank: 2
   maxHP: 9
   attack: 3

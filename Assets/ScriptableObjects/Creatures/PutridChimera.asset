@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: putrid_chimera
   creatureName: Quimera Putrefacta
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 10ce81ae14e6b214eb188df44de3a1de, type: 3}
   rank: 2
   maxHP: 10
   attack: 3

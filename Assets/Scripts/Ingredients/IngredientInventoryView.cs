@@ -139,15 +139,42 @@ public class IngredientInventoryView : MonoBehaviour
 
     private void Start()
     {
-        if (player != null)
-        {
-            player.inventory.OnChanged += Refresh;
-        }
-
+        SubscribeToPlayer();
         Refresh();
     }
 
     private void OnDestroy()
+    {
+        UnsubscribeFromPlayer();
+    }
+
+    public void SetPlayer(PlayerState newPlayer)
+    {
+        if (player == newPlayer)
+        {
+            Refresh();
+            return;
+        }
+
+        UnsubscribeFromPlayer();
+
+        player = newPlayer;
+
+        SubscribeToPlayer();
+
+        Refresh();
+    }
+
+    private void SubscribeToPlayer()
+    {
+        if (player != null && player.inventory != null)
+        {
+            player.inventory.OnChanged -= Refresh;
+            player.inventory.OnChanged += Refresh;
+        }
+    }
+
+    private void UnsubscribeFromPlayer()
     {
         if (player != null && player.inventory != null)
         {

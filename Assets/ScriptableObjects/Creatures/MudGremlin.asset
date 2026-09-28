@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: mud_gremlin
   creatureName: Gremlin de Barro
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: 79fc1df41741d594e9f62e9afd123047, type: 3}
   rank: 0
   maxHP: 4
   attack: 2

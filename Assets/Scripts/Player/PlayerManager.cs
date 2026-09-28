@@ -10,7 +10,9 @@ public class PlayerManager : MonoBehaviour
     private List<PlayerState> players = new List<PlayerState>();
 
     public List<PlayerState> Players => players;
+
     public event Action<PlayerState> OnLastPlayerStanding;
+
     public event Action<PlayerState> OnCoronationClaimed;
 
     private void OnEnable()
@@ -23,17 +25,45 @@ public class PlayerManager : MonoBehaviour
         UnsubscribeFromPlayers();
     }
 
+    public void ConfigurePlayers(List<PlayerState> newPlayers)
+    {
+        UnsubscribeFromPlayers();
+
+        players.Clear();
+
+        if (newPlayers != null)
+        {
+            foreach (PlayerState newPlayer in newPlayers)
+            {
+                if (newPlayer == null || players.Contains(newPlayer))
+                {
+                    continue;
+                }
+
+                players.Add(newPlayer);
+            }
+        }
+
+        SubscribeToPlayers();
+
+        Debug.Log($"PlayerManager configurado con " + $"{players.Count} jugadores.");
+    }
+
     private void SubscribeToPlayers()
     {
         foreach (PlayerState player in players)
         {
             if (player == null)
+            {
                 continue;
+            }
 
             player.OnPlayerDied -= HandlePlayerDeath;
+
             player.OnPlayerDied += HandlePlayerDeath;
 
             player.OnCoronationThresholdReached -= HandleCoronationThresholdReached;
+
             player.OnCoronationThresholdReached += HandleCoronationThresholdReached;
         }
     }
@@ -43,7 +73,9 @@ public class PlayerManager : MonoBehaviour
         foreach (PlayerState player in players)
         {
             if (player == null)
+            {
                 continue;
+            }
 
             player.OnPlayerDied -= HandlePlayerDeath;
 
@@ -53,7 +85,7 @@ public class PlayerManager : MonoBehaviour
 
     private void HandlePlayerDeath(PlayerState deadPlayer, PlayerState killer)
     {
-        Debug.Log($"{deadPlayer.gameObject.name} ha sido eliminado.");
+        Debug.Log($"{deadPlayer.gameObject.name} " + "ha sido eliminado.");
 
         if (killer != null && killer != deadPlayer)
         {
@@ -61,13 +93,14 @@ public class PlayerManager : MonoBehaviour
 
             Debug.Log(
                 $"{killer.gameObject.name} obtiene "
-                    + $"+{PlayerKillArcanePowerReward} Poder Arcano "
-                    + $"por eliminar a {deadPlayer.gameObject.name}."
+                    + $"+{PlayerKillArcanePowerReward} "
+                    + "Poder Arcano por eliminar a "
+                    + $"{deadPlayer.gameObject.name}."
             );
         }
         else
         {
-            Debug.Log("La eliminación no tiene un jugador responsable.");
+            Debug.Log("La eliminación no tiene " + "un jugador responsable.");
         }
 
         CheckLastPlayerStanding();
@@ -77,13 +110,13 @@ public class PlayerManager : MonoBehaviour
     {
         List<PlayerState> alivePlayers = GetAlivePlayers();
 
-        Debug.Log($"Jugadores vivos: {alivePlayers.Count}.");
+        Debug.Log($"Jugadores vivos: " + $"{alivePlayers.Count}.");
 
         if (alivePlayers.Count == 1)
         {
             PlayerState winner = alivePlayers[0];
 
-            Debug.Log($"¡{winner.gameObject.name} es el último jugador vivo!");
+            Debug.Log($"¡{winner.gameObject.name} " + "es el último jugador vivo!");
 
             OnLastPlayerStanding?.Invoke(winner);
         }
@@ -119,6 +152,16 @@ public class PlayerManager : MonoBehaviour
         return opponents;
     }
 
+    public bool IsRegisteredPlayer(PlayerState player)
+    {
+        return player != null && players.Contains(player);
+    }
+
+    public int GetPlayerCount()
+    {
+        return players.Count;
+    }
+
     private void HandleCoronationThresholdReached(PlayerState player)
     {
         if (player == null || !player.IsAlive)
@@ -127,8 +170,10 @@ public class PlayerManager : MonoBehaviour
         }
 
         Debug.Log(
-            $"{player.gameObject.name} reclama la Coronación "
-                + $"con {player.arcanePower} de Poder Arcano."
+            $"{player.gameObject.name} "
+                + "reclama la Coronación "
+                + $"con {player.arcanePower} "
+                + "de Poder Arcano."
         );
 
         OnCoronationClaimed?.Invoke(player);

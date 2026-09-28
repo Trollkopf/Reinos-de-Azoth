@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: corrupted_wolf
   creatureName: Lobo Corrompido
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: b269ce62da7f45e48bec6bd0afc4528a, type: 3}
   rank: 1
   maxHP: 6
   attack: 3
   coinReward: 3
   arcanePowerReward: 2
+  ability: 0
   abilityDescription: Ninguna

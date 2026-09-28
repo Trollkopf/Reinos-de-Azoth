@@ -54,13 +54,11 @@ public class SpellBookView : MonoBehaviour
 
     private void Start()
     {
-        spells = spellBook.Spells;
-
-        player.inventory.OnChanged += RefreshBook;
-
         previousButton.onClick.AddListener(PreviousPage);
 
         nextButton.onClick.AddListener(NextPage);
+
+        ApplyCurrentPlayer();
 
         RefreshBook();
     }
@@ -205,5 +203,69 @@ public class SpellBookView : MonoBehaviour
     public bool IsPlayer(PlayerState target)
     {
         return player == target;
+    }
+
+    public void SetPlayer(PlayerState newPlayer)
+    {
+        if (newPlayer == null)
+        {
+            return;
+        }
+
+        if (player != null)
+        {
+            player.inventory.OnChanged -= RefreshBook;
+        }
+
+        player = newPlayer;
+
+        spellBook = newPlayer.GetComponent<PlayerSpellBook>();
+
+        if (spellBook == null)
+        {
+            Debug.LogError(
+                $"SpellBookView: " + $"{newPlayer.gameObject.name} " + "no tiene PlayerSpellBook."
+            );
+
+            spells = null;
+
+            return;
+        }
+
+        spells = spellBook.Spells;
+
+        player.inventory.OnChanged -= RefreshBook;
+
+        player.inventory.OnChanged += RefreshBook;
+
+        /*
+         * Al cambiar de jugador volvemos
+         * a la primera página del grimorio.
+         */
+        currentSpreadIndex = 0;
+
+        /*
+         * Una recompensa de Maestría no debe
+         * trasladarse accidentalmente al
+         * siguiente jugador humano.
+         */
+        masteryRewardMode = false;
+        masteryRewardPlayer = null;
+
+        RefreshBook();
+    }
+
+    private void ApplyCurrentPlayer()
+    {
+        if (player == null || spellBook == null)
+        {
+            return;
+        }
+
+        spells = spellBook.Spells;
+
+        player.inventory.OnChanged -= RefreshBook;
+
+        player.inventory.OnChanged += RefreshBook;
     }
 }

@@ -14,10 +14,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   id: shadow_rat
   creatureName: Rata de Sombra
-  artwork: {fileID: 0}
+  artwork: {fileID: 21300000, guid: ee1571fa630d744418c51345c8cd5aa2, type: 3}
   rank: 0
   maxHP: 4
   attack: 1
   coinReward: 1
   arcanePowerReward: 1
+  ability: 0
   abilityDescription: Ninguna
