@@ -26,6 +26,9 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private EndGamePanel endGamePanel;
 
+    [SerializeField]
+    private OpponentLayoutController opponentLayoutController;
+
     private readonly List<PlayerState> activePlayers = new List<PlayerState>();
 
     private readonly Dictionary<PlayerState, PlayerType> playerTypes =
@@ -111,10 +114,17 @@ public class GameManager : MonoBehaviour
 
             playerTypes.Add(slot, playerType);
 
-            Debug.Log($"Jugador {i + 1} activado: " + $"{playerType}.");
+            Debug.Log($"Jugador {i + 1} activado: {playerType}.");
         }
 
         playerManager.ConfigurePlayers(activePlayers);
+
+        if (opponentLayoutController != null && activePlayers.Count > 0)
+        {
+            List<PlayerState> opponents = playerManager.GetOpponents(activePlayers[0]);
+
+            opponentLayoutController.ShowOpponents(opponents);
+        }
 
         Debug.Log($"Partida configurada con " + $"{activePlayers.Count} jugadores.");
     }

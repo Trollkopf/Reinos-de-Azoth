@@ -61,15 +61,15 @@ public class IngredientInventoryView : MonoBehaviour
 
         int boneDust = inventory.GetAmount(IngredientType.BoneDust);
 
-        redHerbText.text = $"Hierba Roja: {redHerb}";
+        redHerbText.text = $"{redHerb}";
 
-        pureWaterText.text = $"Agua Pura: {pureWater}";
+        pureWaterText.text = $"{pureWater}";
 
-        sulfurText.text = $"Mineral Sulfuroso: {sulfur}";
+        sulfurText.text = $"{sulfur}";
 
-        airCrystalText.text = $"Cristal de Aire: {airCrystal}";
+        airCrystalText.text = $"{airCrystal}";
 
-        boneDustText.text = $"Polvo de Hueso: {boneDust}";
+        boneDustText.text = $"{boneDust}";
 
         int total = inventory.GetTotalCount();
 
@@ -81,7 +81,7 @@ public class IngredientInventoryView : MonoBehaviour
         }
         else
         {
-            totalText.color = Color.white;
+            totalText.color = Color.black;
         }
 
         bool mustDiscard = total > PlayerState.MaxHandSize;

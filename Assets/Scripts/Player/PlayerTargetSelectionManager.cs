@@ -14,6 +14,12 @@ public class PlayerTargetSelectionManager : MonoBehaviour
 
     public PlayerState CurrentPlayer { get; private set; }
 
+    [SerializeField]
+    private GameObject targetPanel;
+
+    [SerializeField]
+    private PlayerTargetView targetView;
+
     public void SetCurrentPlayer(PlayerState currentPlayer)
     {
         CurrentPlayer = currentPlayer;
@@ -78,6 +84,16 @@ public class PlayerTargetSelectionManager : MonoBehaviour
 
         SelectedPlayer = targetPlayer;
 
+        if (targetView != null)
+        {
+            targetView.SetPlayer(targetPlayer);
+        }
+
+        if (targetPanel != null)
+        {
+            targetPanel.SetActive(true);
+        }
+
         Debug.Log($"Jugador objetivo seleccionado: " + $"{targetPlayer.gameObject.name}");
     }
 
@@ -116,5 +132,15 @@ public class PlayerTargetSelectionManager : MonoBehaviour
         SelectedPlayer = null;
     }
 
-    
+    public void CloseTargetPanel()
+    {
+        SelectedPlayer = null;
+
+        if (targetPanel != null)
+        {
+            targetPanel.SetActive(false);
+        }
+
+        ClearSelection();
+    }
 }

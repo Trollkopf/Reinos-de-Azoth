@@ -34,6 +34,12 @@ public class MarketView : MonoBehaviour
 
     private const int VisibleSlots = 5;
 
+    [SerializeField]
+    private GameLogManager gameLogManager;
+
+    [SerializeField]
+    private OpponentLayoutController opponentLayoutController;
+
     private void Awake()
     {
         EnsureInitialized();
@@ -127,6 +133,27 @@ public class MarketView : MonoBehaviour
                     + $"{card.ingredientType} "
                     + $"por {card.price} monedas."
             );
+
+            if (gameLogManager != null)
+            {
+                string buyerName = buyer.gameObject.name;
+
+                if (opponentLayoutController != null)
+                {
+                    OpponentIdentity identity = opponentLayoutController.GetIdentity(buyer);
+
+                    if (identity != null)
+                    {
+                        buyerName = identity.displayName;
+                    }
+                }
+
+                gameLogManager.AddEntry(
+                    $"{buyerName} compra "
+                        + $"{card.amount} x "
+                        + $"{GetIngredientDisplayName(card.ingredientType)}"
+                );
+            }
         }
 
         marketDeck.Discard(card);
@@ -218,5 +245,29 @@ public class MarketView : MonoBehaviour
     public bool HasFreeRewardFor(PlayerState buyer)
     {
         return freeRewardActive && freeRewardPlayer == buyer;
+    }
+
+    private string GetIngredientDisplayName(IngredientType ingredient)
+    {
+        switch (ingredient)
+        {
+            case IngredientType.RedHerb:
+                return "Hierba Roja";
+
+            case IngredientType.PureWater:
+                return "Agua Pura";
+
+            case IngredientType.SulfurMineral:
+                return "Mineral Sulfuroso";
+
+            case IngredientType.AirCrystal:
+                return "Cristal de Aire";
+
+            case IngredientType.BoneDust:
+                return "Polvo de Hueso";
+
+            default:
+                return ingredient.ToString();
+        }
     }
 }

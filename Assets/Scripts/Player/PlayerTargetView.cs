@@ -19,6 +19,15 @@ public class PlayerTargetView : MonoBehaviour
     [SerializeField]
     private TMP_Text shieldText;
 
+    [SerializeField]
+    private TMP_Text coinsText;
+
+    [SerializeField]
+    private TMP_Text arcanePowerText;
+
+    [SerializeField]
+    private OpponentLayoutController opponentLayoutController;
+
     private void Start()
     {
         Refresh();
@@ -52,7 +61,12 @@ public class PlayerTargetView : MonoBehaviour
 
         if (nameText != null)
         {
-            nameText.text = player.gameObject.name;
+            OpponentIdentity identity =
+                opponentLayoutController != null
+                    ? opponentLayoutController.GetIdentity(player)
+                    : null;
+
+            nameText.text = identity != null ? identity.displayName : player.gameObject.name;
         }
 
         if (healthText != null)
@@ -63,6 +77,16 @@ public class PlayerTargetView : MonoBehaviour
         if (shieldText != null)
         {
             shieldText.text = $"Escudo: {player.shield}";
+        }
+
+        if (coinsText != null)
+        {
+            coinsText.text = $"Oro: {player.coins}";
+        }
+
+        if (arcanePowerText != null)
+        {
+            arcanePowerText.text = $"Poder Arcano: {player.arcanePower}/10";
         }
     }
 
@@ -77,4 +101,22 @@ public class PlayerTargetView : MonoBehaviour
 
         Debug.Log($"Seleccionado como objetivo PvP: {player.gameObject.name}");
     }
+
+    public void SetPlayer(PlayerState newPlayer)
+    {
+        if (player != null)
+        {
+            player.OnStatsChanged -= Refresh;
+        }
+
+        player = newPlayer;
+
+        if (player != null)
+        {
+            player.OnStatsChanged += Refresh;
+        }
+
+        Refresh();
+    }
+    
 }

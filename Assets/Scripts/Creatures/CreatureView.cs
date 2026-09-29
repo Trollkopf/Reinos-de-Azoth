@@ -28,6 +28,9 @@ public class CreatureView : MonoBehaviour, IPointerClickHandler
 
     [SerializeField]
     private GameObject selectionHighlight;
+    [SerializeField]
+    private Image selectionHighlightImage;
+
 
     private CreatureSelectionManager selectionManager;
 
@@ -92,9 +95,12 @@ public class CreatureView : MonoBehaviour, IPointerClickHandler
 
     public void SetSelected(bool selected)
     {
+
+        CreatureDefinition definition = creature.definition;
         if (selectionHighlight != null)
         {
             selectionHighlight.SetActive(selected);
+            selectionHighlightImage.sprite = definition.artwork;
         }
     }
 
